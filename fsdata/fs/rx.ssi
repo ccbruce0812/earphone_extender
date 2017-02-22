@@ -21,12 +21,10 @@
 		</style>
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
 		<script language="javascript">
-			const MSG_PROBE_TX				="MSG_PROBE_TX";
-			const MSG_SET_TX				="MSG_SET_TX"
-			const MSG_GET_TX				="MSG_GET_TX";
-			const MSG_PREV_TX				="MSG_PREV_TX";
-			const MSG_NEXT_TX				="MSG_NEXT_TX";
-			const MSG_SET_CHANNEL			="MSG_SET_CHANNEL"
+			const MSG_GET_STA_LIST			="MSG_GET_STA_LIST";
+			const MSG_SET_STA				="MSG_SET_STA";
+			const MSG_GET_STA				="MSG_GET_STA";
+			const MSG_SET_CHANNEL			="MSG_SET_CHANNEL";
 			const MSG_GET_CHANNEL			="MSG_GET_CHANNEL";
 			const MSG_PREV_CHANNEL			="MSG_PREV_CHANNEL";
 			const MSG_NEXT_CHANNEL			="MSG_NEXT_CHANNEL";
@@ -34,12 +32,10 @@
 			const MSG_GET_VOLUME			="MSG_GET_VOLUME";
 			const MSG_SET_UNMUTE			="MSG_SET_UNMUTE";
 			const MSG_GET_UNMUTE			="MSG_GET_UNMUTE";
-			const MSG_PROBE_TX_REPLY		="MSG_PROBE_TX_REPLY";
-			const MSG_SET_TX_REPLY			="MSG_SET_TX_REPLY"
-			const MSG_GET_TX_REPLY			="MSG_GET_TX_REPLY";
-			const MSG_PREV_TX_REPLY			="MSG_PREV_TX_REPLY";
-			const MSG_NEXT_TX_REPLY			="MSG_NEXT_TX_REPLY";
-			const MSG_SET_CHANNEL_REPLY		="MSG_SET_CHANNEL_REPLY"
+			const MSG_GET_STA_LIST_REPLY	="MSG_GET_STA_LIST_REPLY";
+			const MSG_SET_STA_REPLY			="MSG_SET_STA_REPLY";
+			const MSG_GET_STA_REPLY			="MSG_GET_STA_REPLY";
+			const MSG_SET_CHANNEL_REPLY		="MSG_SET_CHANNEL_REPLY";
 			const MSG_GET_CHANNEL_REPLY		="MSG_GET_CHANNEL_REPLY";
 			const MSG_PREV_CHANNEL_REPLY	="MSG_PREV_CHANNEL_REPLY";
 			const MSG_NEXT_CHANNEL_REPLY	="MSG_NEXT_CHANNEL_REPLY";
@@ -50,22 +46,7 @@
 		
 			var g_webSocket=null;
 			var g_fadeWD=0;
-			var g_tx=[];
 			var g_txProbeWD=null;
-
-			function fade(timeout) {
-				$('#divFade').css("visibility", "visible");
-				g_fadeWD=setTimeout(function(){
-					location.reload();
-					console.log("Fade watchdog is triggered.");
-				}, timeout);
-			}
-			
-			function noFade() {
-				clearTimeout(g_fadeWD);
-				g_fadeWD=0;
-				$('#divFade').css("visibility", "hidden");
-			}
 
 			function getParam(qstr, field) {
 				var regex=new RegExp("[?&]"+field.replace(/[\[\]]/g, "\\$&")+"(=([^&#]*)|&|#|$)"),
@@ -78,6 +59,20 @@
 					return '';
 
 				return decodeURIComponent(res[2].replace(/\+/g, " "));
+			}
+			
+			function fade(timeout) {
+				$('#divFade').css("visibility", "visible");
+				g_fadeWD=setTimeout(function(){
+					location.reload();
+					console.log("Fade watchdog is triggered.");
+				}, timeout);
+			}
+			
+			function noFade() {
+				clearTimeout(g_fadeWD);
+				g_fadeWD=0;
+				$('#divFade').css("visibility", "hidden");
 			}
 			
 			window.addEventListener("load", function () {
@@ -100,7 +95,7 @@
 						arg=arr[1].split(";");
 				
 					switch(msg) {
-						case "MSG_PROBE_TX_REPLY": {
+						case "MSG_GET_STA_LIST_REPLY": {
 							var oldTX=!g_tx.length?"":g_tx[$('#inpTX').val()];
 						
 							g_tx=[];
@@ -134,10 +129,10 @@
 							break;
 						}
 
-						case "MSG_SET_TX_REPLY":
+						case "MSG_SET_STA_REPLY":
 							break;
 
-						case "MSG_GET_TX_REPLY":
+						case "MSG_GET_STA_REPLY":
 							break;
 							
 						case "MSG_PREV_TX_REPLY":
@@ -191,11 +186,11 @@
 				};
 				
 				g_txProbeWD=setInterval(function() {
-					g_webSocket.send(MSG_PROBE_TX);
+					g_webSocket.send(MSG_GET_STA_LIST);
 				}, 10000);
 			});
 
-			function onTX() {
+			function onSta() {
 				g_webSocket.send(MSG_SET_CHANNEL+","+$('#txtCh').html());
 				$('#txtTX').html(g_tx[$('#inpTX').val()].name);
 				$('#txtCh').html(g_tx[$('#inpTX').val()].channel);
@@ -243,10 +238,10 @@
 				</div>
 			</div>
 			<div class="siimple-grid-row">
-				<div class="siimple-grid-col siimple-grid-col--1 siimple-color--grey siimple-bg--navy">TX Name</div>
+				<div class="siimple-grid-col siimple-grid-col--1 siimple-color--grey siimple-bg--navy">Station</div>
 				<div class="siimple-grid-col siimple-grid-col--3 siimple-color--navy siimple-bg--grey" style="padding-top: 0.8%">
-					<input id="inpTX" type="range" min="0" max="0" value="0" onmouseup="onTX()"/>
-					<label id="txtTX" style="display: inline-block"></label>
+					<input id="inpSta" type="range" min="0" max="0" value="0" onmouseup="onSta()"/>
+					<label id="txtSta" style="display: inline-block"></label>
 				</div>
 				<div class="siimple-grid-col siimple-grid-col--1 siimple-color--grey siimple-bg--navy">Channel</div>
 				<div id="txtCh" class="siimple-grid-col siimple-grid-col--7 siimple-color--navy siimple-bg--grey"></div>

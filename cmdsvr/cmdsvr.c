@@ -116,7 +116,7 @@ static void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len
 					RDA5807M_setFreq(freq);
 					
 					strcpy(g_curSta, arg[0]);
-					bufSend=makeRawMsg(MSG_SET_STA_REPLY, "%s", g_curSta);
+					bufSend=makeRawMsg(MSG_SET_STA_REPLY, "%ld", freq);
 				} else
 					bufSend=makeRawMsg(MSG_SET_STA_REPLY, ";;-1");
 
