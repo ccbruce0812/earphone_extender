@@ -10,6 +10,7 @@
 
 #include <i2c/i2c.h>
 #include <rda5807m/rda5807m.h>
+#include <kt0803l/kt0803l.h>
 
 #include <string.h>
 
@@ -30,15 +31,20 @@ static void onBlinkLED(void *param) {
 	stat=!stat;
 }
 
+#ifdef EARPHONE_END
 static void onFakeTXRenew(void *param) {
 	CMDSVR_renewStaTab("Test0", 96000);
 	CMDSVR_renewStaTab("Test1", 97000);
 }
+#endif
 
 static void msgTask(void *param) {
 	Msg msgRecv={0};
-	
+
+#ifdef EARPHONE_END
 	CMDSVR_init();
+#endif
+
 	gpio_write(LED_PIN, true);
 	
 	while(1) {
@@ -47,9 +53,10 @@ static void msgTask(void *param) {
 		switch(msgRecv.id) {
 			case MSG_KEY_PRESSED: {
 				switch(g_curStat) {
-					case STAT_DISCONNECTED:
+					case STAT_DISCONNECTED: {
 						DBG("WiFi is not OK.\n");
 						break;
+					}
 					
 					case STAT_CONNECTED:
 						DBG("WiFi is OK.\n");
@@ -90,7 +97,9 @@ void user_init(void) {
         .ssid = WIFI_SSID,
         .password = WIFI_PASS,
     };
-	RDA5807M_SETTING rxSetting={
+
+#ifdef EARPHONE_END
+	RDA5807M_SETTING setting={
 		.clkSetting={
 			.isClkNoCalb=RDA5807M_FALSE,
 			.isClkDirInp=RDA5807M_FALSE,
@@ -101,13 +110,32 @@ void user_init(void) {
 		.isDECNST50us=RDA5807M_FALSE,
 		.system={
 			.band=RDA5807M_BAND_87_108_MHZ,
-			.is6575Sys=RDA5807M_FALSE,
+			.is6576Sys=RDA5807M_FALSE,
 			.space=RDA5807M_SPACE_100_KHZ
 		}
 	};
+#else
+	KT0803L_SETTING setting={
+		.useExtInductor=KT0803L_FALSE,
+		.clkSetting={
+			.isUpToSW=KT0803L_TRUE,
+			.isXTAL=KT0803L_TRUE,
+			.freq=KT0803L_CLK_FREQ_32_768KHZ
+		},
+		.isPLTAmpHigh=KT0803L_FALSE,
+		.isPHTCNST50us=KT0803L_FALSE,
+		.isFDEV112_5KHZ=KT0803L_FALSE,
+		.isCHSELPAOff=KT0803L_FALSE
+	};
+#endif
 	
     uart_set_baud(0, 115200);
-    DBG("SDK version: %s\n", sdk_system_get_sdk_version());
+
+#ifdef EARPHONE_END
+    DBG("SDK version: %s, Earphone End\n", sdk_system_get_sdk_version());
+#else
+    DBG("SDK version: %s, Station End\n", sdk_system_get_sdk_version());
+#endif
 	
 	gpio_enable(LED_PIN, GPIO_OUTPUT);
 	gpio_write(LED_PIN, false);
@@ -116,19 +144,34 @@ void user_init(void) {
 	GPIO.STATUS_CLEAR=0x0000ffff;
 	gpio_set_interrupt(KEY_PIN, GPIO_INTTYPE_EDGE_NEG, onGPIO);
 
+	gpio_enable(14, GPIO_OUTPUT);
+	gpio_write(14, false);
+	vTaskDelay(MSEC2TICKS(500));
+	gpio_write(14, true);
+	
 	i2c_init(SCL_PIN, SDA_PIN);
-	RDA5807M_init(&rxSetting);
+
+#ifdef EARPHONE_END
+	RDA5807M_init(&setting);
 	RDA5807M_setFreq(96000);
 	RDA5807M_enableOutput(RDA5807M_TRUE);
 	RDA5807M_setVolume(1);
 	RDA5807M_unmute(RDA5807M_TRUE);
-	
+#else
+	KT0803L_init(&setting);
+	KT0803L_setFreq(960);
+	KT0803L_setPGAGain(KT0803L_PGA_GAIN_M5DB, KT0803L_FALSE);
+	KT0803L_PADown(KT0803L_FALSE);
+#endif
+
     sdk_wifi_set_opmode(STATION_MODE);
     sdk_wifi_station_set_config(&config);
     sdk_wifi_station_connect();
 
+#ifdef EARPHONE_END
 	sdk_ets_timer_setfn(&g_timer, onFakeTXRenew, NULL);
 	sdk_ets_timer_arm(&g_timer, 5000, true);
+#endif
 	
 	g_msgQ=xQueueCreate(8, sizeof(Msg));
 	xTaskCreate(msgTask, "msgTask", 512, NULL, 4, NULL);
