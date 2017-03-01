@@ -30,10 +30,12 @@ static void onBlinkLED(void *param) {
 	stat=!stat;
 }
 
+#ifdef EARPHONE_END
 static void onFakeTXRenew(void *param) {
 	CMDSVR_renewStaTab("Test0", 96000);
 	CMDSVR_renewStaTab("Test1", 97000);
 }
+#endif
 
 static void msgTask(void *param) {
 	Msg msgRecv={0};
@@ -90,7 +92,9 @@ void user_init(void) {
         .ssid = WIFI_SSID,
         .password = WIFI_PASS,
     };
-	RDA5807M_SETTING rxSetting={
+	
+#ifdef EARPHONE_END
+	RDA5807M_SETTING setting={
 		.clkSetting={
 			.isClkNoCalb=RDA5807M_FALSE,
 			.isClkDirInp=RDA5807M_FALSE,
@@ -101,10 +105,24 @@ void user_init(void) {
 		.isDECNST50us=RDA5807M_FALSE,
 		.system={
 			.band=RDA5807M_BAND_87_108_MHZ,
-			.is6575Sys=RDA5807M_FALSE,
+			.is6576Sys=RDA5807M_FALSE,
 			.space=RDA5807M_SPACE_100_KHZ
 		}
 	};
+#else
+	FMTX_SETTING setting={
+		.useExtInductor=FMTX_FALSE,
+		.clkSetting={
+			.isUpToSW=FMTX_TRUE,
+			.isXTAL=FMTX_TRUE,
+			.freq=FMTX_CLK_FREQ_32_768KHZ
+		},
+		.isPLTAmpHigh=FMTX_FALSE,
+		.isPHTCNST50us=FMTX_FALSE,
+		.isFDEV112_5KHZ=FMTX_FALSE,
+		.isCHSELPAOff=FMTX_FALSE
+	};
+#endif
 	
     uart_set_baud(0, 115200);
     DBG("SDK version: %s\n", sdk_system_get_sdk_version());
@@ -117,19 +135,29 @@ void user_init(void) {
 	gpio_set_interrupt(KEY_PIN, GPIO_INTTYPE_EDGE_NEG, onGPIO);
 
 	i2c_init(SCL_PIN, SDA_PIN);
-	RDA5807M_init(&rxSetting);
+	
+#ifdef EARPHONE_END
+	RDA5807M_init(&setting);
 	RDA5807M_setFreq(96000);
 	RDA5807M_enableOutput(RDA5807M_TRUE);
 	RDA5807M_setVolume(1);
 	RDA5807M_unmute(RDA5807M_TRUE);
+#else
+	FMTX_init(&setting);
+	FMTX_setFreq(960);
+	FMTX_setPGAGain(FMTX_PGA_GAIN_M5DB, FMTX_FALSE);
+	FMTX_PADown(FMTX_FALSE);
+#endif
 	
     sdk_wifi_set_opmode(STATION_MODE);
     sdk_wifi_station_set_config(&config);
     sdk_wifi_station_connect();
 
+#ifdef EARPHONE_END
 	sdk_ets_timer_setfn(&g_timer, onFakeTXRenew, NULL);
 	sdk_ets_timer_arm(&g_timer, 5000, true);
-	
+#endif
+
 	g_msgQ=xQueueCreate(8, sizeof(Msg));
 	xTaskCreate(msgTask, "msgTask", 512, NULL, 4, NULL);
 }
