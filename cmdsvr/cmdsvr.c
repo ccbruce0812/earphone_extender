@@ -33,13 +33,72 @@ static const char *g_ssiTab[]={
 	"ap",
 	"ip",
 	"netmask",
-	"gateway"
+	"gateway",
+	"panel"
 };
 
 static char g_curSta[32]="";
 
+static const char *readValue(int count, char *param[], char *value[], const char *key) {
+	int i=0;
+	
+	for(i=0;i<count;i++) {
+		if(!strcmp(param[i], key))
+			return value[i];
+	}
+	
+	return NULL;
+}
+
 static char *onCGI(int idx, int count, char *param[], char *value[]) {
-    return "/index.ssi";
+	const char *val=NULL;
+	char *ret="/aborted.html";
+	
+	if((val=readValue(count, param, value, "action"))) {
+		switch(atoi(val)) {
+			case 0: {
+				unsigned char stat=sdk_wifi_station_get_connect_status();
+			
+				ret=(stat==STATION_GOT_IP)?"/wifiReady.ssi":"/setWiFi.html";
+				goto end;
+			}
+
+			case 1: {
+				struct sdk_station_config config;
+				unsigned char stat=STATION_IDLE;
+				unsigned int prev=0, now=0;
+				
+				memset(&config, 0, sizeof(config));
+				if(val=readValue(count, param, value, "ap"))
+					strncpy((char *)config.ssid, val, 32);
+				if(val=readValue(count, param, value, "pass"))
+					strncpy((char *)config.password, val, 64);
+				
+				sdk_wifi_station_set_config(&config);
+				sdk_wifi_station_connect();
+				
+				now=prev=xTaskGetTickCount();
+				while(1) {
+					if((stat=sdk_wifi_station_get_connect_status())==STATION_GOT_IP) {
+						ret="/wifiReady.ssi";
+						break;
+					}
+					
+					vTaskDelay(MSEC2TICKS(500));
+					if((now=xTaskGetTickCount())-prev>=MSEC2TICKS(5000)) {
+						ret="/setWiFi.html";
+						break;
+					}
+				}
+			}
+			
+			default:
+				;
+		}
+	}
+
+end:
+    return ret;
 }
 
 static int onSSI(int idx, char *ins, int len) {
@@ -77,6 +136,14 @@ static int onSSI(int idx, char *ins, int len) {
 			
 			sdk_wifi_get_ip_info(STATION_IF, &info);
 			snprintf(ins, len, "%s", inet_ntoa(info.gw));
+			break;
+		}
+		
+		case 5: {
+			struct ip_info info={0};
+			
+			sdk_wifi_get_ip_info(STATION_IF, &info);
+			snprintf(ins, len, "<a href=\"http://%s/rx.ssi\">", inet_ntoa(info.ip));
 			break;
 		}
 

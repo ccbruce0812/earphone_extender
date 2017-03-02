@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no">
+		<link rel="shortcut icon" href="img/favicon.png">
+		<title>HTTP Server</title>
+		<style>
+			.header {
+				text-align: center;
+			}
+		
+			.table {
+				margin: auto;
+				width: 90%;
+				border: 1px solid black;
+				border-radius: 5px;
+				padding: 10px;
+			}
+				
+			.input {
+				width: 100%;
+				align: center;
+			}
+		</style>
+	</head>
+	<body>
+		<h1 class="header">Set WiFi</h1>
+		<form action="/cmdSvr.cgi" method="get">
+			<input type="hidden" name="action" value="1">
+			<table class="table">
+				<tr>
+					<td width="20%">SSID</td>
+					<td><input class="input" type="text" name="ap" value=""></td>
+				</tr>
+				<tr>
+					<td width="20%">Password</td>
+					<td><input class="input" type="text" name="pass" value=""></td>
+				</tr>
+				<tr>
+					<td width="100%" colspan="2" align="right">
+						<input type="submit" value="Submit">
+					</td>
+				</tr>
+			</table>
+		</form>
+	</body>
+</html>

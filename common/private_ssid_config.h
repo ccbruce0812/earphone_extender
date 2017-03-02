@@ -5,8 +5,8 @@
 extern "C" {
 #endif
 
-#define WIFI_SSID		"5-8F-1"
-#define WIFI_PASS		"26430660"
+#define WIFI_SSID		"5-8F-1x"
+#define WIFI_PASS		"26430660x"
 #ifdef EARPHONE_END
 #define AP_SSID_PREFIX	"EARPHONE_END_"
 #else

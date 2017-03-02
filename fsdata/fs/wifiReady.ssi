@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no">
+		<link rel="shortcut icon" href="img/favicon.png">
+		<title>HTTP Server</title>
+		<style>
+			.header {
+				text-align: center;
+			}
+			
+			.prompt {
+				text-align: center;
+			}
+		</style>
+		<script language="javascript">
+			window.addEventListener("load", function() {
+			});
+		</script>
+	</head>
+	<body>
+		<input type="hidden" id="ip">
+		<h1 class="header">WiFi is ready</h1>
+		<h2 class="prompt">Connect your mobile device to '<!--#ap-->' and click this <!--#panel-->link</a> to continue.</h2>
+	</body>
+</html>
