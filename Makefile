@@ -1,5 +1,5 @@
 PROGRAM				= earphone_extender
-EXTRA_COMPONENTS	= extras/i2c extras/httpd extras/mbedtls
+EXTRA_COMPONENTS	= extras/i2c extras/httpd extras/mbedtls extras/dhcpserver
 PROGRAM_SRC_DIR		= . ./common ./main ./cmdsvr
 EXTRA_CFLAGS		= -DLWIP_HTTPD_CGI=1 -DLWIP_HTTPD_SSI=1 -I./fsdata
 #EXTRA_CFLAGS		+=-DLWIP_DEBUG=1 -DHTTPD_DEBUG=LWIP_DBG_ON
