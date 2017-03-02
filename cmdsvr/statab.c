@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include <assert.h>
 
 #include "../common/toolhelp.h"
 
@@ -23,7 +24,7 @@ static int purgeStaTab(StaTabItem *(*freeItem)[16]) {
 
 	if(!freeItem) {
 		DBG("Bad argument. Check your code.\n");
-		//assert(false);
+		assert(false);
 	}
 	
 	for(i=0;i<sizeof(g_staTab)/sizeof(g_staTab[0]);i++) {
@@ -47,16 +48,16 @@ static int getSta(const char *name, StaTabItem **item) {
 
 	if(!name || !item) {
 		DBG("Bad argument. Check your code.\n");
-		//assert(false);
+		assert(false);
 	}
-	
+
 	for(i=0;i<sizeof(g_staTab)/sizeof(g_staTab[0]);i++) {
 		if(!strcmp(g_staTab[i].name, name)) {
 			*item=&g_staTab[i];
 			return 0;
 		}
 	}
-	
+
 	*item=NULL;
 	return -1;
 }
@@ -66,7 +67,7 @@ static int getAvailSta(StaTabItem *(*availItem)[16]) {
 
 	if(!availItem) {
 		DBG("Bad argument. Check your code.\n");
-		//assert(false);
+		assert(false);
 	}
 	
 	for(i=0;i<sizeof(g_staTab)/sizeof(g_staTab[0]);i++) {
@@ -83,12 +84,13 @@ int renewStaTab(const char *name, unsigned long freq) {
 
 	if(!name) {
 		DBG("Bad argument. Check your code.\n");
-		//assert(false);
+		assert(false);
 	}
 	
 	taskENTER_CRITICAL();
-
+	
 	freeItemCnt=purgeStaTab(&freeItem);
+	
 	if(!getSta(name, &matchedItem)) {
 		matchedItem->freq=freq;
 		matchedItem->ts=xTaskGetTickCount();
@@ -97,7 +99,7 @@ int renewStaTab(const char *name, unsigned long freq) {
 		if(freeItemCnt) {
 			strcpy(freeItem[0]->name, name);
 			freeItem[0]->freq=freq;
-			matchedItem->ts=xTaskGetTickCount();
+			freeItem[0]->ts=xTaskGetTickCount();
 			goto ok;
 		}
 	}
@@ -117,7 +119,7 @@ int staTab2Str(char *str) {
 
 	if(!str) {
 		DBG("Bad argument. Check your code.\n");
-		//assert(false);
+		assert(false);
 	}
 	
 	taskENTER_CRITICAL();
@@ -148,7 +150,7 @@ int getStaFreq(const char *name, unsigned long *freq) {
 
 	if(!name || !freq) {
 		DBG("Bad argument. Check your code.\n");
-		//assert(false);
+		assert(false);
 	}
 	
 	taskENTER_CRITICAL();

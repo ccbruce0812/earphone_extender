@@ -172,7 +172,7 @@ void user_init(void) {
 	sdk_ets_timer_setfn(&g_timer, onFakeTXRenew, NULL);
 	sdk_ets_timer_arm(&g_timer, 5000, true);
 #endif
-	
+
 	g_msgQ=xQueueCreate(8, sizeof(Msg));
 	xTaskCreate(msgTask, "msgTask", 512, NULL, 4, NULL);
 }
