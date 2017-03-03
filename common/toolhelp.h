@@ -6,6 +6,10 @@ extern "C" {
 #endif
 
 #include <FreeRTOS.h>
+#include <queue.h>
+#include <task.h>
+
+#include <espressif/esp_common.h>
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -30,6 +34,21 @@ static inline int __dbg__(const char *loc, const char *fmt, ...) {
 #else
 #define DBG(...)
 #endif
+
+static inline const char *sysStr(void) {
+	static char buf[64]="";
+
+	taskENTER_CRITICAL();
+
+#ifdef EARPHONE_END
+    sprintf(buf, "SDK version: %s, Earphone End\n", sdk_system_get_sdk_version());
+#else
+    sprintf(buf, "SDK version: %s, Station End\n", sdk_system_get_sdk_version());
+#endif
+
+	taskEXIT_CRITICAL();
+	return buf;
+}
 
 #ifdef __cplusplus
 }

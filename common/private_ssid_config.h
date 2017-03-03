@@ -5,14 +5,14 @@
 extern "C" {
 #endif
 
-#define WIFI_SSID		"5-8F-1x"
-#define WIFI_PASS		"26430660x"
+//#define WIFI_SSID						"5-8F-1"
+//#define WIFI_PASS						"26430660"
 #ifdef EARPHONE_END
-#define AP_SSID_PREFIX	"EARPHONE_END_"
+#define DEFAULT_LOCAL_SSID_PREFIX		"EARPHONE_END"
 #else
-#define AP_SSID			"STATION_END_"
+#define DEFAULT_LOCAL_SSID_PREFIX		"STATION_END"
 #endif
-#define AP_PASS		"12345678"
+#define DEFAULT_LOCAL_PASS				"12345678"
 
 #ifdef __cplusplus
 }

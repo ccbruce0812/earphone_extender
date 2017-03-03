@@ -19,7 +19,7 @@
 			}
 				
 			.input {
-				width: 100%;
+				width: 90%;
 				align: center;
 			}
 		</style>
@@ -30,12 +30,16 @@
 			<input type="hidden" name="action" value="1">
 			<table class="table">
 				<tr>
+					<td width="20%">Name</td>
+					<td><input class="input" type="text" name="lcSSID" maxlength="31" value="<!--#lcSSID-->"></td>
+				</tr>
+				<tr>
 					<td width="20%">SSID</td>
-					<td><input class="input" type="text" name="ap" value=""></td>
+					<td><input class="input" type="text" name="apSSID" maxlength="31" value="<!--#apSSID-->"></td>
 				</tr>
 				<tr>
 					<td width="20%">Password</td>
-					<td><input class="input" type="text" name="pass" value=""></td>
+					<td><input class="input" type="text" name="apPass" maxlength="63" value=""></td>
 				</tr>
 				<tr>
 					<td width="100%" colspan="2" align="right">

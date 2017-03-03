@@ -12,11 +12,13 @@
 
 #include <i2c/i2c.h>
 #include <rda5807m/rda5807m.h>
+#include <kt0803l/kt0803l.h>
 #include <httpd/httpd.h>
 
 #include <string.h>
 #include <assert.h>
 
+#include "../common/private_ssid_config.h"
 #include "../common/toolhelp.h"
 #include "cmdsvr.h"
 #include "wsmsg.h"
@@ -30,11 +32,12 @@ static const tCGI g_cgiTab[]={
 
 static const char *g_ssiTab[]={
 	"version",
-	"ap",
+	"apSSID",
+	"lcSSID",
 	"ip",
 	"netmask",
 	"gateway",
-	"panel"
+	"page"
 };
 
 static char g_curSta[32]="";
@@ -59,37 +62,34 @@ static char *onCGI(int idx, int count, char *param[], char *value[]) {
 			case 0: {
 				unsigned char stat=sdk_wifi_station_get_connect_status();
 			
-				ret=(stat==STATION_GOT_IP)?"/wifiReady.ssi":"/setWiFi.html";
+				ret=(stat==STATION_GOT_IP)?"/wifiReady.ssi":"/setWiFi.ssi";
 				goto end;
 			}
 
 			case 1: {
-				struct sdk_station_config config;
-				unsigned char stat=STATION_IDLE;
-				unsigned int prev=0, now=0;
+				struct sdk_softap_config apCfg;
+				struct sdk_station_config staCfg;
 				
-				memset(&config, 0, sizeof(config));
-				if(val=readValue(count, param, value, "ap"))
-					strncpy((char *)config.ssid, val, 32);
-				if(val=readValue(count, param, value, "pass"))
-					strncpy((char *)config.password, val, 64);
+				memset(&apCfg, 0, sizeof(apCfg));
+				sdk_wifi_softap_get_config(&apCfg);
+				if((val=readValue(count, param, value, "lcSSID")) && strlen(val))
+					strncpy((char *)apCfg.ssid, val, 32);
+				apCfg.ssid_len=0;
+				strncpy((char *)apCfg.password, DEFAULT_LOCAL_PASS, 64);
+				//sdk_wifi_softap_set_config(&apCfg);
 				
-				sdk_wifi_station_set_config(&config);
+				memset(&staCfg, 0, sizeof(staCfg));
+				sdk_wifi_station_get_config(&staCfg);
+				if((val=readValue(count, param, value, "apSSID")) && strlen(val))
+					strncpy((char *)staCfg.ssid, val, 32);
+				if((val=readValue(count, param, value, "apPass")) && strlen(val))
+					strncpy((char *)staCfg.password, val, 64);
+				sdk_wifi_station_set_config(&staCfg);
+
 				sdk_wifi_station_connect();
 				
-				now=prev=xTaskGetTickCount();
-				while(1) {
-					if((stat=sdk_wifi_station_get_connect_status())==STATION_GOT_IP) {
-						ret="/wifiReady.ssi";
-						break;
-					}
-					
-					vTaskDelay(MSEC2TICKS(500));
-					if((now=xTaskGetTickCount())-prev>=MSEC2TICKS(5000)) {
-						ret="/setWiFi.html";
-						break;
-					}
-				}
+				ret="/check.html";
+				goto end;
 			}
 			
 			default:
@@ -104,46 +104,60 @@ end:
 static int onSSI(int idx, char *ins, int len) {
     switch(idx) {
         case 0:
-            snprintf(ins, len, "%s", sdk_system_get_sdk_version());
+            snprintf(ins, len, "%s", sysStr());
             break;
 			
 		case 1: {
-			struct sdk_station_config cfg={0};
+			struct sdk_station_config cfg;
 			
+			memset(&cfg, 0, sizeof(cfg));
 			sdk_wifi_station_get_config(&cfg);
 			snprintf(ins, len, "%s", cfg.ssid);
 			break;
 		}
-
+		
 		case 2: {
-			struct ip_info info={0};
+			struct sdk_softap_config cfg;
 			
+			memset(&cfg, 0, sizeof(cfg));
+			sdk_wifi_softap_get_config(&cfg);
+			snprintf(ins, len, "%s", cfg.ssid);
+			break;
+		}
+
+		case 3: {
+			struct ip_info info;
+			
+			memset(&info, 0, sizeof(info));
 			sdk_wifi_get_ip_info(STATION_IF, &info);
 			snprintf(ins, len, "%s", inet_ntoa(info.ip));
 			break;
 		}
 
-		case 3: {
-			struct ip_info info={0};
+		case 4: {
+			struct ip_info info;
 			
+			memset(&info, 0, sizeof(info));
 			sdk_wifi_get_ip_info(STATION_IF, &info);
 			snprintf(ins, len, "%s", inet_ntoa(info.netmask));
 			break;
 		}
 		
-		case 4: {
-			struct ip_info info={0};
+		case 5: {
+			struct ip_info info;
 			
+			memset(&info, 0, sizeof(info));
 			sdk_wifi_get_ip_info(STATION_IF, &info);
 			snprintf(ins, len, "%s", inet_ntoa(info.gw));
 			break;
 		}
 		
-		case 5: {
-			struct ip_info info={0};
-			
-			sdk_wifi_get_ip_info(STATION_IF, &info);
-			snprintf(ins, len, "<a href=\"http://%s/rx.ssi\">", inet_ntoa(info.ip));
+		case 6: {
+#ifdef EARPHONE_END
+			snprintf(ins, len, "rx.ssi");
+#else
+			snprintf(ins, len, "tx.ssi");
+#endif
 			break;
 		}
 
@@ -157,13 +171,14 @@ static int onSSI(int idx, char *ins, int len) {
 static void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsigned char mode) {
 	char *bufRecv=malloc(len+1);
 	unsigned short msgRecv=MSG_MIN;
-	const char *arg[16]={0};
+	const char *arg[16];
 	int res=-1;
 	const char *bufSend=NULL;
 	
 	assert(bufRecv);
 	memset(bufRecv, 0, len+1);
 	memcpy(bufRecv, data, len);
+	memset(arg, 0, sizeof(arg));
 	if((res=parseRawMsg(bufRecv, &msgRecv, &arg))>=0) {
 		switch(msgRecv) {
 			case MSG_GET_STA_LIST: {

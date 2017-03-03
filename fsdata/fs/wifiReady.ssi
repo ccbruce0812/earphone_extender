@@ -20,8 +20,8 @@
 		</script>
 	</head>
 	<body>
-		<input type="hidden" id="ip">
 		<h1 class="header">WiFi is ready</h1>
-		<h2 class="prompt">Connect your mobile device to '<!--#ap-->' and click this <!--#panel-->link</a> to continue.</h2>
+		<h2 class="prompt">Connect your mobile device to '<!--#apSSID-->' and click this <a href="http://<!--#ip-->/<!--#page-->">link</a> to continue.</h2>
+		<h2 class="prompt">You can also <a href="/setWiFi.ssi">go back</a> to set WiFi again.</h2>
 	</body>
 </html>

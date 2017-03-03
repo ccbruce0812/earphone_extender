@@ -12,6 +12,7 @@
 #include <rda5807m/rda5807m.h>
 #include <kt0803l/kt0803l.h>
 #include <dhcpserver.h>
+#include <esp_spiffs.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -27,12 +28,14 @@ QueueHandle_t g_msgQ=NULL;
 ETSTimer g_timer={0};
 unsigned char g_curStat=STAT_DISCONNECTED;
 
+/*
 static void onBlinkLED(void *param) {
 	static bool stat=false;
 	
 	gpio_write(LED_PIN, stat);
 	stat=!stat;
 }
+*/
 
 #ifdef EARPHONE_END
 static void onFakeTXRenew(void *param) {
@@ -93,7 +96,30 @@ static void onGPIO(unsigned char num) {
 	}
 }
 
-static void GPIO_init(void) {
+static void initFS(void) {
+    esp_spiffs_init();
+
+    if(esp_spiffs_mount()!=SPIFFS_OK) {
+        DBG("Failed to mount SPIFFS\n");
+		assert(false);
+    }
+
+    while (1) {
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+        example_write_file();
+
+        example_read_file_posix();
+
+        example_read_file_spiffs();
+
+        example_fs_info();
+
+        printf("\n\n");
+    }
+}
+
+static void initGPIO(void) {
 	gpio_enable(LED_PIN, GPIO_OUTPUT);
 	gpio_write(LED_PIN, false);
 
@@ -106,7 +132,7 @@ static void GPIO_init(void) {
 	gpio_write(LED_PIN, false);
 }
 
-static void FM_init(void) {
+static void initFM(void) {
 #ifdef EARPHONE_END
 	RDA5807M_SETTING setting={
 		.clkSetting={
@@ -154,69 +180,59 @@ static void FM_init(void) {
 #endif
 }
 
-static void WiFi_init(void) {
-    struct sdk_station_config staConfig={
-        .ssid=WIFI_SSID,
-        .password=WIFI_PASS,
-    };
-	struct sdk_softap_config apConfig={
-		.password=AP_PASS,
-		.ssid_len=0,
-		.channel=0,
-		.authmode=AUTH_WPA_WPA2_PSK,
-		.ssid_hidden=0,
-		.max_connection=1,
-		.beacon_interval=100
-	};
-	struct ip_info ipAddr={0};
+static void initWiFi(void) {
+    struct sdk_station_config staCfg;
+	struct sdk_softap_config apCfg;
+	struct ip_info ipAddr;
 	
-	//sta+ap mode
     sdk_wifi_set_opmode(STATIONAP_MODE);
 
-	//set sta config
-    sdk_wifi_station_set_config(&staConfig);
+	memset(&staCfg, 0, sizeof(staCfg));
+	sdk_wifi_station_get_config(&staCfg);
+    sdk_wifi_station_set_config(&staCfg);
 
-	//set ap config
-	srand(xTaskGetTickCount());
-	sprintf((char *)apConfig.ssid, "%s%d", AP_SSID_PREFIX, rand()%100);
-	strcpy((char *)apConfig.password, AP_PASS);
-	sdk_wifi_softap_set_config(&apConfig);
+	memset(&apCfg, 0, sizeof(apCfg));
+	sdk_wifi_softap_get_config(&apCfg);
+	if(!apCfg.ssid[0]) {
+		srand(xTaskGetTickCount());
+		sprintf((char *)apCfg.ssid, "%s_%d", DEFAULT_LOCAL_SSID_PREFIX, rand()%10000);
+		strcpy((char *)apCfg.password, DEFAULT_LOCAL_PASS);
+	}
+	sdk_wifi_softap_set_config(&apCfg);
 
-	//set ap ip
+	memset(&ipAddr, 0, sizeof(ipAddr));
 	IP4_ADDR(&ipAddr.ip, 192, 168, 254, 254);
 	IP4_ADDR(&ipAddr.gw, 192, 168, 254, 254);
 	IP4_ADDR(&ipAddr.netmask, 255, 255, 255, 0);
 	sdk_wifi_set_ip_info(SOFTAP_IF, &ipAddr);
 	
-	//start dhcp
+	memset(&ipAddr, 0, sizeof(ipAddr));
 	IP4_ADDR(&ipAddr.ip, 192, 168, 254, 100);
 	dhcpserver_start(&ipAddr.ip, 10);
 
-	//connect
     sdk_wifi_station_connect();
 }
 
 void user_init(void) {
+	initFS();
+	
 	//init UART
     uart_set_baud(0, 115200);
 
-#ifdef EARPHONE_END
-    DBG("SDK version: %s, Earphone End\n", sdk_system_get_sdk_version());
-#else
-    DBG("SDK version: %s, Station End\n", sdk_system_get_sdk_version());
-#endif
+	//print version string
+	DBG("%s\n", sysStr());
 	
 	//init GPIO
-	GPIO_init();
+	initGPIO();
 
 	//init I2C
 	i2c_init(SCL_PIN, SDA_PIN);
 	
 	//init FM
-	FM_init();
+	initFM();
 
 	//init WiFi
-	WiFi_init();
+	initWiFi();
 
 #ifdef EARPHONE_END
 	sdk_ets_timer_setfn(&g_timer, onFakeTXRenew, NULL);
