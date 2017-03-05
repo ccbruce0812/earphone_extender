@@ -17,6 +17,8 @@
 
 #include <string.h>
 #include <assert.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "../common/private_ssid_config.h"
 #include "../common/toolhelp.h"
@@ -67,17 +69,28 @@ static char *onCGI(int idx, int count, char *param[], char *value[]) {
 			}
 
 			case 1: {
+				InitParam data;
 				struct sdk_softap_config apCfg;
 				struct sdk_station_config staCfg;
 				
 				memset(&apCfg, 0, sizeof(apCfg));
 				sdk_wifi_softap_get_config(&apCfg);
 				if((val=readValue(count, param, value, "lcSSID")) && strlen(val))
-					strncpy((char *)apCfg.ssid, val, 32);
-				apCfg.ssid_len=0;
-				strncpy((char *)apCfg.password, DEFAULT_LOCAL_PASS, 64);
-				//sdk_wifi_softap_set_config(&apCfg);
+					strncpy((char *)data.locSSID, val, 32);
+				if((val=readValue(count, param, value, "lcPass")) && strlen(val))
+					strncpy((char *)apCfg.password, val, 64);
+				sdk_wifi_softap_set_config(&apCfg);
 				
+				if(strcmp((char *)data.locSSID, (char *)apCfg.ssid)) {
+					int fout=open("initParam", O_WRONLY|O_CREAT, 0);
+					
+					if(fout>=0) {
+						write(fout, &data, sizeof(data));
+						DBG("New local SSID is '%s'.\n", data.locSSID);
+						close(fout);
+					}
+				}
+
 				memset(&staCfg, 0, sizeof(staCfg));
 				sdk_wifi_station_get_config(&staCfg);
 				if((val=readValue(count, param, value, "apSSID")) && strlen(val))

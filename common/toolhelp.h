@@ -16,6 +16,10 @@ extern "C" {
 
 #define MSEC2TICKS(n) (n/portTICK_PERIOD_MS)
 
+typedef struct {
+	unsigned char locSSID[32];
+} InitParam;
+
 #ifndef EARPHONE_EXTENDER_NDEBUG
 static inline int __dbg__(const char *loc, const char *fmt, ...) {
 	va_list args;

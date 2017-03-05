@@ -30,15 +30,19 @@
 			<input type="hidden" name="action" value="1">
 			<table class="table">
 				<tr>
-					<td width="20%">Name</td>
+					<td width="30%">Local SSID</td>
 					<td><input class="input" type="text" name="lcSSID" maxlength="31" value="<!--#lcSSID-->"></td>
 				</tr>
 				<tr>
-					<td width="20%">SSID</td>
+					<td width="30%">Local Password</td>
+					<td><input class="input" type="text" name="lcPass" maxlength="31" value=""></td>
+				</tr>
+				<tr>
+					<td width="30%">SSID</td>
 					<td><input class="input" type="text" name="apSSID" maxlength="31" value="<!--#apSSID-->"></td>
 				</tr>
 				<tr>
-					<td width="20%">Password</td>
+					<td width="30%">Password</td>
 					<td><input class="input" type="text" name="apPass" maxlength="63" value=""></td>
 				</tr>
 				<tr>

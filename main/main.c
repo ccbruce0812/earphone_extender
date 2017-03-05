@@ -17,6 +17,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <assert.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "../common/private_ssid_config.h"
 #include "../common/toolhelp.h"
@@ -103,20 +107,6 @@ static void initFS(void) {
         DBG("Failed to mount SPIFFS\n");
 		assert(false);
     }
-
-    while (1) {
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-        example_write_file();
-
-        example_read_file_posix();
-
-        example_read_file_spiffs();
-
-        example_fs_info();
-
-        printf("\n\n");
-    }
 }
 
 static void initGPIO(void) {
@@ -181,22 +171,30 @@ static void initFM(void) {
 }
 
 static void initWiFi(void) {
-    struct sdk_station_config staCfg;
+	int fin=open("initParam", O_RDONLY);
 	struct sdk_softap_config apCfg;
 	struct ip_info ipAddr;
 	
     sdk_wifi_set_opmode(STATIONAP_MODE);
 
-	memset(&staCfg, 0, sizeof(staCfg));
-	sdk_wifi_station_get_config(&staCfg);
-    sdk_wifi_station_set_config(&staCfg);
-
 	memset(&apCfg, 0, sizeof(apCfg));
 	sdk_wifi_softap_get_config(&apCfg);
-	if(!apCfg.ssid[0]) {
-		srand(xTaskGetTickCount());
-		sprintf((char *)apCfg.ssid, "%s_%d", DEFAULT_LOCAL_SSID_PREFIX, rand()%10000);
-		strcpy((char *)apCfg.password, DEFAULT_LOCAL_PASS);
+	if(fin>=0) {
+		InitParam data;
+		
+		if(read(fin, &data, sizeof(data))==sizeof(data)) {
+			memcpy(apCfg.ssid, data.locSSID, sizeof(data.locSSID));
+			DBG("New local SSID is '%s'.\n", apCfg.ssid);
+		}
+		
+		close(fin);
+		unlink("initParam");
+	} else {
+		if(!apCfg.ssid[0]) {
+			srand(xTaskGetTickCount());
+			sprintf((char *)apCfg.ssid, "%s_%04d", DEFAULT_LOCAL_SSID_PREFIX, rand()%10000);
+			strcpy((char *)apCfg.password, DEFAULT_LOCAL_PASS);
+		}
 	}
 	sdk_wifi_softap_set_config(&apCfg);
 
