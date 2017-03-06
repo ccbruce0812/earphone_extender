@@ -17,16 +17,11 @@ typedef struct {
 	unsigned int ts;
 } StaTabItem;
 
-static StaTabItem g_staTab[16]={0};
+static StaTabItem g_staTab[16];
 
 static int purgeStaTab(StaTabItem *(*freeItem)[16]) {
 	int i, j=0;
 
-	if(!freeItem) {
-		DBG("Bad argument. Check your code.\n");
-		assert(false);
-	}
-	
 	for(i=0;i<sizeof(g_staTab)/sizeof(g_staTab[0]);i++) {
 		unsigned int now=xTaskGetTickCount();
 		
@@ -34,7 +29,7 @@ static int purgeStaTab(StaTabItem *(*freeItem)[16]) {
 			(g_staTab[i].ts>now || now-g_staTab[i].ts>=MSEC2TICKS(30000)))
 			memset(&g_staTab[i], 0, sizeof(StaTabItem));
 		
-		if(!g_staTab[i].name[0]) {
+		if(freeItem && !g_staTab[i].name[0]) {
 			(*freeItem)[j++]=&g_staTab[i];
 			continue;
 		}
@@ -78,6 +73,14 @@ static int getAvailSta(StaTabItem *(*availItem)[16]) {
 	return j;
 }
 
+void initStaTab(void) {
+	taskENTER_CRITICAL();
+	
+	memset(g_staTab, 0, sizeof(g_staTab));
+	
+	taskEXIT_CRITICAL();
+}
+
 int renewStaTab(const char *name, unsigned long freq) {
 	StaTabItem *freeItem[16]={0}, *matchedItem=NULL;
 	int freeItemCnt=0;
@@ -114,8 +117,8 @@ ok:
 }
 
 int staTab2Str(char *str) {
-	StaTabItem *freeItem[16]={0}, *availItem[16]={0};
-	int freeItemCnt=0, availItemCnt=0, i;
+	StaTabItem *availItem[16]={0};
+	int availItemCnt=0, i;
 
 	if(!str) {
 		DBG("Bad argument. Check your code.\n");
@@ -124,7 +127,7 @@ int staTab2Str(char *str) {
 	
 	taskENTER_CRITICAL();
 
-	freeItemCnt=purgeStaTab(&freeItem);
+	purgeStaTab(NULL);
 	availItemCnt=getAvailSta(&availItem);
 	
 	taskEXIT_CRITICAL();
@@ -134,7 +137,7 @@ int staTab2Str(char *str) {
 		return -1;
 	}
 	
-	str[0]=NULL;
+	str[0]='\0';
 	for(i=0;i<availItemCnt;i++) {
 		strcat(str, availItem[i]->name);
 		if(i+1<availItemCnt)
@@ -145,8 +148,7 @@ int staTab2Str(char *str) {
 }
 
 int getStaFreq(const char *name, unsigned long *freq) {
-	StaTabItem *freeItem[16]={0}, *matchedItem=NULL;
-	int freeItemCnt=0;
+	StaTabItem *matchedItem=NULL;
 
 	if(!name || !freq) {
 		DBG("Bad argument. Check your code.\n");
@@ -155,7 +157,7 @@ int getStaFreq(const char *name, unsigned long *freq) {
 	
 	taskENTER_CRITICAL();
 
-	freeItemCnt=purgeStaTab(&freeItem);
+	purgeStaTab(NULL);
 	if(!getSta(name, &matchedItem)) {
 		*freq=matchedItem->freq;
 		goto ok;

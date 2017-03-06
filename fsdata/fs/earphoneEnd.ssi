@@ -1,21 +1,20 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>RX Control Panel</title>
-		
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no">
-		<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/siimple/2.0.0/siimple.min.css">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<link rel="shortcut icon" href="img/favicon.png">
+		<title>HTTP Server</title>
+		<link rel="stylesheet" type="text/css" href="style/style.css">
 		<style>
 			.fade {
-				opacity:    0.5; 
-				background: black; 
+				opacity:    0.5;
+				background: black;
 				width:      100%;
-				height:     100%; 
+				height:     100%;
 				z-index:    10;
-				top:        0; 
-				left:       0; 
+				top:        0;
+				left:       0;
 				position:   fixed;
 			}
 		</style>
@@ -212,46 +211,35 @@
 	</head>
 	
 	<body>
-		<div class="siimple-grid" style="font-weight: 700">
-			<div class="siimple-grid-row">
-				<div class="siimple-grid-col siimple-grid-col--1 siimple-color--grey siimple-bg--teal">Version</div>
-				<div class="siimple-grid-col siimple-grid-col--11 siimple-color--teal siimple-bg--grey">
-					<!--#version-->
+		<div class="header">Earphone end page</div>
+		<div class="main">
+			<div class="row" style="height: 40px">
+				<div class="grid" style="width: 30%; font-size: 16px">Station</div>
+				<div class="grid" style="width: 70%; text-align: right">
+					<div class="grid" style="width: 60%">
+						<input class="slider" id="inpSta" type="range" min="0" max="0" value="0" onmouseup="onSta()"/>
+					</div>
+					<div class="grid" style="width: 40%">
+						<label id="txtSta"></label>
+					</div>
 				</div>
 			</div>
-			<div class="siimple-grid-row">
-				<div class="siimple-grid-col siimple-grid-col--1 siimple-color--grey siimple-bg--blue">AP</div>
-				<div class="siimple-grid-col siimple-grid-col--1 siimple-color--blue siimple-bg--grey">
-					<!--#ap-->
-				</div>
-				<div class="siimple-grid-col siimple-grid-col--1 siimple-color--grey siimple-bg--blue">IP</div>
-				<div class="siimple-grid-col siimple-grid-col--1 siimple-color--blue siimple-bg--grey">
-					<!--#ip-->
-				</div>
-				<div class="siimple-grid-col siimple-grid-col--1 siimple-color--grey siimple-bg--blue">Netmask</div>
-				<div class="siimple-grid-col siimple-grid-col--1 siimple-color--blue siimple-bg--grey">
-					<!--#netmask-->
-				</div>
-				<div class="siimple-grid-col siimple-grid-col--1 siimple-color--grey siimple-bg--blue">Gateway</div>
-				<div class="siimple-grid-col siimple-grid-col--5 siimple-color--blue siimple-bg--grey">
-					<!--#gateway-->
-				</div>
+			<div class="row" style="height: 40px">
+				<div class="grid" style="width: 30%; font-size: 16px">Channel</div>
+				<div class="grid" style="width: 70%; text-align: right" id="txtCh"></div>
 			</div>
-			<div class="siimple-grid-row">
-				<div class="siimple-grid-col siimple-grid-col--1 siimple-color--grey siimple-bg--navy">Station</div>
-				<div class="siimple-grid-col siimple-grid-col--3 siimple-color--navy siimple-bg--grey" style="padding-top: 0.8%">
-					<input id="inpSta" type="range" min="0" max="0" value="0" onmouseup="onSta()"/>
-					<label id="txtSta" style="display: inline-block"></label>
-				</div>
-				<div class="siimple-grid-col siimple-grid-col--1 siimple-color--grey siimple-bg--navy">Channel</div>
-				<div id="txtCh" class="siimple-grid-col siimple-grid-col--7 siimple-color--navy siimple-bg--grey"></div>
-			</div>
-			<div class="siimple-grid-row">
-				<div class="siimple-grid-col siimple-grid-col--1 siimple-color--grey siimple-bg--navy">Volume</div>
-				<div class="siimple-grid-col siimple-grid-col--11 siimple-color--navy siimple-bg--grey" style="padding-top: 0.8%">
-					<input id="inpVol" type="range" min="1" max="15" value="1" onmouseup="onVol()"/>
-					<label id="txtVol" style="display: inline-block">1</label>
-					<input id="inpMute" type="checkbox" onmouseup="onMute()"/>Mute
+			<div class="row" style="height: 40px">
+				<div class="grid" style="width: 30%; font-size: 16px">Volume</div>
+				<div class="grid" style="width: 70%; text-align: right">
+					<div class="grid" style="width: 40%">
+						<input class="slider" id="inpVol" type="range" min="1" max="15" value="1" onmouseup="onVol()"/>
+					</div>
+					<div class="grid" style="width: 20%">
+						<input id="inpMute" type="checkbox" onmouseup="onMute()"/>Mute
+					</div>
+					<div class="grid" style="width: 40%">
+						<label id="txtVol">1</label>
+					</div>
 				</div>
 			</div>
 		</div>

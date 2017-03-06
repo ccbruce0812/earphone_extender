@@ -2,26 +2,16 @@
 <html>
 	<head>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<link rel="shortcut icon" href="img/favicon.png">
 		<title>HTTP Server</title>
-		<style>
-			.header {
-				text-align: center;
-			}
-			
-			.prompt {
-				text-align: center;
-			}
-		</style>
-		<script language="javascript">
-			window.addEventListener("load", function() {
-			});
-		</script>
+		<link rel="stylesheet" type="text/css" href="style/style.css">
 	</head>
 	<body>
-		<h1 class="header">WiFi is ready</h1>
-		<h2 class="prompt">Connect your mobile device to '<!--#apSSID-->' and click this <a href="http://<!--#ip-->/<!--#page-->">link</a> to continue.</h2>
-		<h2 class="prompt">You can also <a href="/setWiFi.ssi">go back</a> to set WiFi again.</h2>
+		<div class="header">WiFi is ready</div>
+		<div class="main" style="font-size: 18px">
+			Connect your mobile device to '<!--#apSSID-->' and click this <a href="http://<!--#ip-->/<!--#page-->">link</a> to continue.<br>
+			You can also <a href="/setWiFi.ssi">go back</a> to set WiFi again.
+		</div>
 	</body>
 </html>

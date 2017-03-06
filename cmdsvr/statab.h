@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 
+void initStaTab(void);
 int renewStaTab(const char *name, unsigned long freq);
 int staTab2Str(char *list);
 int getStaFreq(const char *name, unsigned long *freq);

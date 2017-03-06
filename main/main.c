@@ -213,23 +213,11 @@ static void initWiFi(void) {
 
 void user_init(void) {
 	initFS();
-	
-	//init UART
     uart_set_baud(0, 115200);
-
-	//print version string
 	DBG("%s\n", sysStr());
-	
-	//init GPIO
 	initGPIO();
-
-	//init I2C
 	i2c_init(SCL_PIN, SDA_PIN);
-	
-	//init FM
 	initFM();
-
-	//init WiFi
 	initWiFi();
 
 #ifdef EARPHONE_END

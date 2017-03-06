@@ -2,55 +2,44 @@
 <html>
 	<head>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<link rel="shortcut icon" href="img/favicon.png">
 		<title>HTTP Server</title>
-		<style>
-			.header {
-				text-align: center;
-			}
-		
-			.table {
-				margin: auto;
-				width: 90%;
-				border: 1px solid black;
-				border-radius: 5px;
-				padding: 10px;
-			}
-				
-			.input {
-				width: 90%;
-				align: center;
-			}
-		</style>
+		<link rel="stylesheet" type="text/css" href="style/style.css">
 	</head>
 	<body>
-		<h1 class="header">Set WiFi</h1>
+		<div class="header">Set WiFi</div>
 		<form action="/cmdSvr.cgi" method="get">
 			<input type="hidden" name="action" value="1">
-			<table class="table">
-				<tr>
-					<td width="30%">Local SSID</td>
-					<td><input class="input" type="text" name="lcSSID" maxlength="31" value="<!--#lcSSID-->"></td>
-				</tr>
-				<tr>
-					<td width="30%">Local Password</td>
-					<td><input class="input" type="text" name="lcPass" maxlength="31" value=""></td>
-				</tr>
-				<tr>
-					<td width="30%">SSID</td>
-					<td><input class="input" type="text" name="apSSID" maxlength="31" value="<!--#apSSID-->"></td>
-				</tr>
-				<tr>
-					<td width="30%">Password</td>
-					<td><input class="input" type="text" name="apPass" maxlength="63" value=""></td>
-				</tr>
-				<tr>
-					<td width="100%" colspan="2" align="right">
-						<input type="submit" value="Submit">
-					</td>
-				</tr>
-			</table>
+			<div class="main">
+				<div class="row" style="height: 40px">
+					<div class="grid" style="width: 30%; font-size: 16px">Local SSID</div>
+					<div class="grid" style="width: 70%; text-align: right">
+						<input class="input" type="text" name="lcSSID" maxlength="31" value="<!--#lcSSID-->">
+					</div>
+				</div>
+				<div class="row" style="height: 40px">
+					<div class="grid" style="width: 30%; font-size: 16px">Local Password</div>
+					<div class="grid" style="width: 70%; text-align: right">
+                    	<input class="input" type="password" name="lcPass" maxlength="31" value="">
+                    </div>
+				</div>
+				<div class="row" style="height: 40px">
+					<div class="grid" style="width: 30%; font-size: 16px">SSID</div>
+					<div class="grid" style="width: 70%; text-align: right">
+                    	<input class="input" type="text" name="apSSID" maxlength="31" value="<!--#apSSID-->">
+                    </div>
+				</div>
+				<div class="row" style="height: 40px">
+					<div class="grid" style="width: 30%; font-size: 16px">Password</div>
+					<div class="grid" style="width: 70%; text-align: right">
+                    	<input class="input" type="password" name="apPass" maxlength="63" value="">
+              		</div>
+				</div>
+				<div class="row" style="height: 40px">
+					<input type="submit" class="button" value="Submit" on>
+				</div>
+			</div>
 		</form>
 	</body>
 </html>
