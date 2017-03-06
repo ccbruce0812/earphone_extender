@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="shortcut icon" href="img/favicon.png">
+		<title>HTTP Server</title>
+		<link rel="stylesheet" type="text/css" href="style/style.css">
+		<style>
+			.fade {
+				opacity:    0.5;
+				background: black;
+				width:      100%;
+				height:     100%;
+				z-index:    10;
+				top:        0;
+				left:       0;
+				position:   fixed;
+			}
+		</style>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+		<script language="javascript">
+			const MSG_GET_STA_LIST			="MSG_GET_STA_LIST";
+			const MSG_SET_STA				="MSG_SET_STA";
+			const MSG_GET_STA				="MSG_GET_STA";
+			const MSG_SET_CHANNEL			="MSG_SET_CHANNEL";
+			const MSG_GET_CHANNEL			="MSG_GET_CHANNEL";
+			const MSG_PREV_CHANNEL			="MSG_PREV_CHANNEL";
+			const MSG_NEXT_CHANNEL			="MSG_NEXT_CHANNEL";
+			const MSG_SET_VOLUME			="MSG_SET_VOLUME";
+			const MSG_GET_VOLUME			="MSG_GET_VOLUME";
+			const MSG_SET_UNMUTE			="MSG_SET_UNMUTE";
+			const MSG_GET_UNMUTE			="MSG_GET_UNMUTE";
+			const MSG_GET_STA_LIST_REPLY	="MSG_GET_STA_LIST_REPLY";
+			const MSG_SET_STA_REPLY			="MSG_SET_STA_REPLY";
+			const MSG_GET_STA_REPLY			="MSG_GET_STA_REPLY";
+			const MSG_SET_CHANNEL_REPLY		="MSG_SET_CHANNEL_REPLY";
+			const MSG_GET_CHANNEL_REPLY		="MSG_GET_CHANNEL_REPLY";
+			const MSG_PREV_CHANNEL_REPLY	="MSG_PREV_CHANNEL_REPLY";
+			const MSG_NEXT_CHANNEL_REPLY	="MSG_NEXT_CHANNEL_REPLY";
+			const MSG_SET_VOLUME_REPLY		="MSG_SET_VOLUME_REPLY";
+			const MSG_GET_VOLUME_REPLY		="MSG_GET_VOLUME_REPLY";
+			const MSG_SET_UNMUTE_REPLY		="MSG_SET_UNMUTE_REPLY";
+			const MSG_GET_UNMUTE_REPLY		="MSG_GET_UNMUTE_REPLY";
+		
+			var g_webSocket=null;
+			var g_fadeWD=0;
+			var g_txProbeWD=null;
+
+			function getParam(qstr, field) {
+				var regex=new RegExp("[?&]"+field.replace(/[\[\]]/g, "\\$&")+"(=([^&#]*)|&|#|$)"),
+					res=regex.exec(qstr);
+
+				if(!res)
+					return null;
+
+				if(!res[2])
+					return '';
+
+				return decodeURIComponent(res[2].replace(/\+/g, " "));
+			}
+			
+			function fade(timeout) {
+				$('#divFade').css("visibility", "visible");
+				g_fadeWD=setTimeout(function(){
+					location.reload();
+					console.log("Fade watchdog is triggered.");
+				}, timeout);
+			}
+			
+			function noFade() {
+				clearTimeout(g_fadeWD);
+				g_fadeWD=0;
+				$('#divFade').css("visibility", "hidden");
+			}
+			
+			window.addEventListener("load", function () {
+				g_webSocket=new WebSocket("ws://"+window.location.hostname+"/CmdSvr.ws");
+
+				g_webSocket.onopen=function(evt) {
+					console.log("onopen");
+				};
+
+				g_webSocket.onclose=function(evt) {
+					console.log("onclose");
+				};
+				
+				g_webSocket.onmessage=function(evt) {
+					var arr=evt.data.split(",");
+					var msg=arr[0];
+					var arg=null;
+					
+					if(arr.length>1)
+						arg=arr[1].split(";");
+				
+					switch(msg) {
+						case "MSG_GET_STA_LIST_REPLY": {
+							var oldTX=!g_tx.length?"":g_tx[$('#inpTX').val()];
+						
+							g_tx=[];
+							arg.forEach(function(item, idx) {
+								var tmp=item.split(":");
+								
+								if(tmp.length>=2)
+									g_tx.push({
+										name: tmp[0],
+										channel: tmp[1]
+									});
+							});
+							
+							$('#inpTX').prop("min", 0);
+							$('#inpTX').prop("max", g_tx.length-1);
+							$('#txtTX').html("");
+							$('#txtCh').html("");
+							
+							g_tx.forEach(function(item, idx) {
+								if(item.name==oldTX.name) {
+									$('#inpTX').val(idx);
+									$('#txtTX').html(item.name);
+									$('#txtCh').html(item.channel);
+									
+									if(item.channel!=oldTX.channel) {
+										g_webSocket.send(MSG_SET_CHANNEL+","+$('#txtCh').html());
+										fade(5000);
+									}
+								}
+							});
+							break;
+						}
+
+						case "MSG_SET_STA_REPLY":
+							break;
+
+						case "MSG_GET_STA_REPLY":
+							break;
+							
+						case "MSG_PREV_TX_REPLY":
+							noFade();
+							break;
+
+						case "MSG_NEXT_TX_REPLY":
+							noFade();
+							break;
+
+						case "MSG_SET_CHANNEL_REPLY":
+							noFade();
+							break;
+
+						case "MSG_GET_CHANNEL_REPLY":
+							break;
+
+						case "MSG_PREV_CHANNEL_REPLY":
+							break;
+
+						case "MSG_NEXT_CHANNEL_REPLY":
+							break;
+
+						case "MSG_SET_VOLUME_REPLY":
+							$('#txtVol').html(arg[0]);
+							$('#inpVol').val(arg[0]);
+							noFade();
+							break;
+
+						case "MSG_GET_VOLUME_REPLY":
+							noFade();
+							break;
+
+						case "MSG_SET_UNMUTE_REPLY":
+							$('#inpMute').prop("checked", arg[0]=="0"?true:false);
+							$('#inpVol').prop("disabled", arg[0]=="0"?true:false);
+							noFade();
+							break;
+
+						case "MSG_GET_UNMUTE_REPLY":
+							noFade();
+							break;
+
+						default:
+							break;
+					}
+				};
+				
+				g_webSocket.onerror=function(evt) {
+					console.log("onerror");
+				};
+				
+				g_txProbeWD=setInterval(function() {
+					g_webSocket.send(MSG_GET_STA_LIST);
+				}, 10000);
+			});
+
+			function onSta() {
+				g_webSocket.send(MSG_SET_CHANNEL+","+$('#txtCh').html());
+				$('#txtTX').html(g_tx[$('#inpTX').val()].name);
+				$('#txtCh').html(g_tx[$('#inpTX').val()].channel);
+				fade(5000);
+			}
+
+			function onVol() {
+				$('#txtVol').html($('#inpVol').val());
+				g_webSocket.send(MSG_SET_VOLUME+","+$('#inpVol').val());
+				fade(5000);
+			}
+			
+			function onMute() {
+				$('#inpVol').prop("disabled", !$('#inpMute').prop("checked"));
+				g_webSocket.send(MSG_SET_UNMUTE+","+($('#inpMute').prop("checked")?255:0));
+				fade(5000);
+			}
+		</script>
+	</head>
+	
+	<body>
+		<div class="header">Home
+			<div style="float: right">
+				<a class="link" href="/<!--#page-->">Home</a>&nbsp|
+				<a class="link" href="/info.ssi">System Information</a>&nbsp|
+				<a class="link" href="/setWiFi.ssi">Setting</a>
+			</div>
+		</div>
+		<div class="main">
+			<div class="row" style="height: 40px">
+				<div class="grid" style="width: 30%; font-size: 16px">Version</div>
+				<div class="grid" style="width: 70%; text-align: right"><!--#version--></div>
+			</div>
+			<div class="row" style="height: 40px">
+				<div class="grid" style="width: 30%; font-size: 16px">Local SSID</div>
+				<div class="grid" style="width: 70%; text-align: right"><!--#locSSID--></div>
+			</div>
+			<div class="row" style="height: 40px">
+				<div class="grid" style="width: 30%; font-size: 16px">SSID</div>
+				<div class="grid" style="width: 70%; text-align: right"><!--#apSSID--></div>
+			</div>
+			<div class="row" style="height: 40px">
+				<div class="grid" style="width: 30%; font-size: 16px">IP</div>
+				<div class="grid" style="width: 70%; text-align: right"><!--#ip--></div>
+			</div>
+			<div class="row" style="height: 40px">
+				<div class="grid" style="width: 30%; font-size: 16px">Netmask</div>
+				<div class="grid" style="width: 70%; text-align: right"><!--#netmask--></div>
+			</div>
+			<div class="row" style="height: 40px">
+				<div class="grid" style="width: 30%; font-size: 16px">Gateway</div>
+				<div class="grid" style="width: 70%; text-align: right"><!--#gateway--></div>
+			</div>
+		</div>
+		<div id="divFade" class="fade" style="visibility: hidden"></div>
+	</body>
+</html>

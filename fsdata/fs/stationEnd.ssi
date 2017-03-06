@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="shortcut icon" href="img/favicon.png">
+		<title>HTTP Server</title>
+		<link rel="stylesheet" type="text/css" href="style/style.css">
+		<style>
+			.fade {
+				opacity:    0.5;
+				background: black;
+				width:      100%;
+				height:     100%;
+				z-index:    10;
+				top:        0;
+				left:       0;
+				position:   fixed;
+			}
+		</style>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+		<script language="javascript">
+			const MSG_SET_CHANNEL			="MSG_SET_CHANNEL";
+			const MSG_GET_CHANNEL			="MSG_GET_CHANNEL";
+			const MSG_SET_CHANNEL_REPLY		="MSG_SET_CHANNEL_REPLY";
+			const MSG_GET_CHANNEL_REPLY		="MSG_GET_CHANNEL_REPLY";
+			
+			var g_webSocket=null;
+			var g_fadeWD=null;
+
+			function getParam(qstr, field) {
+				var regex=new RegExp("[?&]"+field.replace(/[\[\]]/g, "\\$&")+"(=([^&#]*)|&|#|$)"),
+					res=regex.exec(qstr);
+
+				if(!res)
+					return null;
+
+				if(!res[2])
+					return '';
+
+				return decodeURIComponent(res[2].replace(/\+/g, " "));
+			}
+			
+			function fade(timeout) {
+				if(g_fadeWD)
+					return;
+			
+				$('#divFade').css("visibility", "visible");
+				g_fadeWD=setTimeout(function(){
+					location.reload();
+					console.log("Fade watchdog is triggered.");
+				}, timeout);
+			}
+			
+			function noFade() {
+				clearTimeout(g_fadeWD);
+				g_fadeWD=null;
+				$('#divFade').css("visibility", "hidden");
+			}
+			
+			window.addEventListener("load", function () {
+				g_webSocket=new WebSocket("ws://"+window.location.hostname+"/CmdSvr.ws");
+
+				g_webSocket.onopen=function(evt) {
+					console.log("onopen");
+				};
+
+				g_webSocket.onclose=function(evt) {
+					console.log("onclose");
+				};
+				
+				g_webSocket.onerror=function(evt) {
+					console.log("onerror");
+				};
+				
+				g_webSocket.onmessage=function(evt) {
+					var arr=evt.data.split(",");
+					var msg=arr[0];
+					var arg=null;
+					
+					if(arr.length>1)
+						arg=arr[1].split(";");
+				
+					switch(msg) {
+						case "MSG_SET_CHANNEL_REPLY": {
+							noFade();
+							break;
+						}
+
+						case "MSG_GET_CHANNEL_REPLY": {
+							var obj=$('#inpCh');
+						
+							obj.val(arg[0]);
+							syncCh();
+							noFade();
+							break;
+						}
+
+						default:
+							break;
+					}
+				};
+
+				g_webSocket.send(MSG_GET_CHANNEL);
+				fade(5000);
+			});
+
+			function syncCh() {
+				var obj0=$('#inpCh'),
+					obj1=$('#txtCh');
+			
+				obj1.html((obj0.val()/10)+"MHz");
+			}
+
+			function onCh() {
+				var obj=$('#inpCh');
+			
+				g_webSocket.send(MSG_SET_CHANNEL+","+obj.val());
+				syncCh();
+				fade(5000);
+			}
+		</script>
+	</head>
+	
+	<body>
+		<div class="header">Home
+			<div style="float: right">
+				<a class="link" href="/<!--#page-->">Home</a>&nbsp|
+				<a class="link" href="/info.ssi">System Information</a>&nbsp|
+				<a class="link" href="/setWiFi.ssi">Setting</a>
+			</div>
+		</div>
+		<div class="main">
+			<div class="row" style="height: 40px">
+				<div class="grid" style="width: 30%; font-size: 16px">Channel</div>
+				<div class="grid" style="width: 70%; text-align: right">
+					<div class="grid" style="width: 60%">
+						<input class="slider" id="inpCh" type="range" min="860" max="1070" step="10" value="960" onmouseup="onCh()">
+					</div>
+					<div class="grid" style="width: 40%">
+						<label id="txtCh"></label>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div id="divFade" class="fade" style="visibility: hidden"></div>
+	</body>
+</html>

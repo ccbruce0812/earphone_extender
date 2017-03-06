@@ -59,3 +59,23 @@
 	cursor: pointer;
 	background-color: #a0a0a0;
 }
+
+.link {
+	text-decoration: none
+}
+
+.link:link {
+    color: #9999ff;
+}
+
+.link:link {
+    color: #9999ff;
+}
+
+.link:hover {
+    color: white;
+}
+
+.link:active {
+    color: #9999ff;
+}
