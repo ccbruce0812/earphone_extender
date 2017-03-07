@@ -22,22 +22,12 @@
 		<script language="javascript">
 			const MSG_GET_STA_LIST			="MSG_GET_STA_LIST";
 			const MSG_SET_STA				="MSG_SET_STA";
-			const MSG_GET_STA				="MSG_GET_STA";
-			const MSG_SET_CHANNEL			="MSG_SET_CHANNEL";
-			const MSG_GET_CHANNEL			="MSG_GET_CHANNEL";
-			const MSG_PREV_CHANNEL			="MSG_PREV_CHANNEL";
-			const MSG_NEXT_CHANNEL			="MSG_NEXT_CHANNEL";
 			const MSG_SET_VOLUME			="MSG_SET_VOLUME";
 			const MSG_GET_VOLUME			="MSG_GET_VOLUME";
 			const MSG_SET_UNMUTE			="MSG_SET_UNMUTE";
 			const MSG_GET_UNMUTE			="MSG_GET_UNMUTE";
 			const MSG_GET_STA_LIST_REPLY	="MSG_GET_STA_LIST_REPLY";
 			const MSG_SET_STA_REPLY			="MSG_SET_STA_REPLY";
-			const MSG_GET_STA_REPLY			="MSG_GET_STA_REPLY";
-			const MSG_SET_CHANNEL_REPLY		="MSG_SET_CHANNEL_REPLY";
-			const MSG_GET_CHANNEL_REPLY		="MSG_GET_CHANNEL_REPLY";
-			const MSG_PREV_CHANNEL_REPLY	="MSG_PREV_CHANNEL_REPLY";
-			const MSG_NEXT_CHANNEL_REPLY	="MSG_NEXT_CHANNEL_REPLY";
 			const MSG_SET_VOLUME_REPLY		="MSG_SET_VOLUME_REPLY";
 			const MSG_GET_VOLUME_REPLY		="MSG_GET_VOLUME_REPLY";
 			const MSG_SET_UNMUTE_REPLY		="MSG_SET_UNMUTE_REPLY";
@@ -45,7 +35,7 @@
 		
 			var g_webSocket=null;
 			var g_fadeWD=0;
-			var g_txProbeWD=null;
+			var g_probeWD=null;
 
 			function getParam(qstr, field) {
 				var regex=new RegExp("[?&]"+field.replace(/[\[\]]/g, "\\$&")+"(=([^&#]*)|&|#|$)"),
@@ -83,6 +73,10 @@
 
 				g_webSocket.onclose=function(evt) {
 					console.log("onclose");
+				};
+
+				g_webSocket.onerror=function(evt) {
+					console.log("onerror");
 				};
 				
 				g_webSocket.onmessage=function(evt) {
@@ -129,30 +123,7 @@
 						}
 
 						case "MSG_SET_STA_REPLY":
-							break;
-
-						case "MSG_GET_STA_REPLY":
-							break;
-							
-						case "MSG_PREV_TX_REPLY":
 							noFade();
-							break;
-
-						case "MSG_NEXT_TX_REPLY":
-							noFade();
-							break;
-
-						case "MSG_SET_CHANNEL_REPLY":
-							noFade();
-							break;
-
-						case "MSG_GET_CHANNEL_REPLY":
-							break;
-
-						case "MSG_PREV_CHANNEL_REPLY":
-							break;
-
-						case "MSG_NEXT_CHANNEL_REPLY":
 							break;
 
 						case "MSG_SET_VOLUME_REPLY":
@@ -180,11 +151,7 @@
 					}
 				};
 				
-				g_webSocket.onerror=function(evt) {
-					console.log("onerror");
-				};
-				
-				g_txProbeWD=setInterval(function() {
+				g_probeWD=setInterval(function() {
 					g_webSocket.send(MSG_GET_STA_LIST);
 				}, 10000);
 			});
@@ -228,7 +195,7 @@
 			function onMute() {
 				var obj=$('#inpMute');
 			
-				g_webSocket.send(MSG_SET_UNMUTE+","+(obj.prop("checked")?255:0));
+				g_webSocket.send(MSG_SET_UNMUTE+","+(obj.prop("checked")?-1:0));
 				syncMute();
 				fade(5000);
 			}
@@ -248,7 +215,9 @@
 				<div class="grid" style="width: 30%; font-size: 16px">Station</div>
 				<div class="grid" style="width: 70%; text-align: right">
 					<div class="grid" style="width: 60%">
-						<input class="slider" id="inpSta" type="range" min="0" max="0" value="0" onmouseup="onSta()">
+						<select id="inpSta" onmouseup="onSta()">
+							<option value="none">none</option>
+						</select>
 					</div>
 					<div class="grid" style="width: 40%">
 						<label id="txtSta"></label>

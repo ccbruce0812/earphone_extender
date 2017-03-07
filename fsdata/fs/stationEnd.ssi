@@ -83,6 +83,8 @@
 				
 					switch(msg) {
 						case "MSG_SET_CHANNEL_REPLY": {
+							if(arg[0]<0)
+								console.log("Failed");
 							noFade();
 							break;
 						}
@@ -101,7 +103,6 @@
 					}
 				};
 
-				g_webSocket.send(MSG_GET_CHANNEL);
 				fade(5000);
 			});
 

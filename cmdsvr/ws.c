@@ -42,7 +42,7 @@ void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsig
 				char val[256];
 				
 				staTab2Str(val);
-				bufSend=makeRawMsg(MSG_GET_STA_LIST_REPLY, "%s", buf);
+				bufSend=makeRawMsg(MSG_GET_STA_LIST_REPLY, "%s", val);
 				
 				DBG("bufSend=%s\n", bufSend);
 				websocket_write(pcb, (unsigned char *)bufSend, strlen(bufSend), WS_TEXT_MODE);
@@ -50,17 +50,13 @@ void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsig
 			}
 
 			case MSG_SET_STA: {
-				unsigned long val0, val1;
+				unsigned long val;
 				
 				DBG("msgRecv=%d, arg=%s\n", msgRecv, arg[0]);
-				if(!getStaFreq(arg[0], &val0)) {
-					RDA5807M_setFreq(val0);
-					RDA5807M_getFreq(&val1);
 
-					if(val0==val1)
-						bufSend=makeRawMsg(MSG_SET_STA_REPLY, "0;%ld", val1);
-					else
-						bufSend=makeRawMsg(MSG_SET_STA_REPLY, "-1");	
+				if(getStaFreq(arg[0], &val)>=0 &&
+					RDA5807M_setFreq(val)>=0) {
+					bufSend=makeRawMsg(MSG_SET_STA_REPLY, "0;%d", val);
 				} else
 					bufSend=makeRawMsg(MSG_SET_STA_REPLY, "-1");
 
@@ -69,20 +65,11 @@ void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsig
 				break;
 			}
 
-			case MSG_GET_STA:
-				break;
-
 			case MSG_SET_VOLUME: {
-				unsigned char val0, val1;
-				
 				DBG("msgRecv=%d, arg=%s\n", msgRecv, arg[0]);
-				val0=atoi(arg[0]);
-
-				RDA5807M_setVolume(val0);
-				RDA5807M_getVolume(&val1);
 				
-				if(val0==val1)
-					bufSend=makeRawMsg(MSG_SET_VOLUME_REPLY, "0;%d", val1);
+				if(RDA5807M_setVolume((unsigned char)atoi(arg[0]))>=0)
+					bufSend=makeRawMsg(MSG_SET_VOLUME_REPLY, "0");
 				else
 					bufSend=makeRawMsg(MSG_SET_VOLUME_REPLY, "-1");
 
@@ -91,20 +78,26 @@ void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsig
 				break;
 			}
 
-			case MSG_GET_VOLUME:
-				break;
-
-			case MSG_SET_UNMUTE: {
-				RDA5807M_BOOL val0, val1;
+			case MSG_GET_VOLUME: {
+				unsigned char val;
 				
 				DBG("msgRecv=%d, arg=%s\n", msgRecv, arg[0]);
-				val0=atoi(arg[0])?RDA5807M_TRUE:RDA5807M_FALSE;
 				
-				RDA5807M_unmute(val0);
-				RDA5807M_isUnmute(&val1);
+				if(RDA5807M_getVolume(&val)>=0)
+					bufSend=makeRawMsg(MSG_GET_VOLUME_REPLY, "0;%d", val);
+				else
+					bufSend=makeRawMsg(MSG_GET_VOLUME_REPLY, "-1");
+
+				DBG("bufSend=%s\n", bufSend);
+				websocket_write(pcb, (unsigned char *)bufSend, strlen(bufSend), WS_TEXT_MODE);
+				break;
+			}
+
+			case MSG_SET_UNMUTE: {
+				DBG("msgRecv=%d, arg=%s\n", msgRecv, arg[0]);
 				
-				if(val0==val1)
-					bufSend=makeRawMsg(MSG_SET_UNMUTE_REPLY, "0;%d", val1);
+				if(RDA5807M_unmute(atoi(arg[0])?RDA5807M_TRUE:RDA5807M_FALSE)>=0)
+					bufSend=makeRawMsg(MSG_SET_UNMUTE_REPLY, "0");
 				else
 					bufSend=makeRawMsg(MSG_SET_UNMUTE_REPLY, "-1");
 	
@@ -113,8 +106,20 @@ void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsig
 				break;
 			}
 
-			case MSG_GET_UNMUTE:
+			case MSG_GET_UNMUTE: {
+				RDA5807M_BOOL val;
+				
+				DBG("msgRecv=%d\n", msgRecv);
+				
+				if(RDA5807M_isUnmute(&val)>=0)
+					bufSend=makeRawMsg(MSG_GET_UNMUTE_REPLY, "0;%d", val);
+				else
+					bufSend=makeRawMsg(MSG_GET_UNMUTE_REPLY, "-1");
+	
+				DBG("bufSend=%s\n", bufSend);
+				websocket_write(pcb, (unsigned char *)bufSend, strlen(bufSend), WS_TEXT_MODE);
 				break;
+			}
 
 			default:
 				;
@@ -138,14 +143,10 @@ void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsig
 	if((res=parseRawMsg(bufRecv, &msgRecv, &arg))>=0) {
 		switch(msgRecv) {
 			case MSG_SET_CHANNEL: {
-				unsigned short val0, val1;
-				
 				DBG("msgRecv=%d, arg=%s\n", msgRecv, arg[0]);
-				KT0803L_setFreq((val0=(unsigned short)atoi(arg[0])));
-				KT0803L_getFreq(&val1);
 				
-				if(val0==val1)
-					bufSend=makeRawMsg(MSG_SET_CHANNEL_REPLY, "0;%d", val1);
+				if(KT0803L_setFreq((unsigned short)atoi(arg[0]))>=0)
+					bufSend=makeRawMsg(MSG_SET_CHANNEL_REPLY, "0");
 				else
 					bufSend=makeRawMsg(MSG_SET_CHANNEL_REPLY, "-1");
 
@@ -158,9 +159,8 @@ void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsig
 				unsigned short val;
 				
 				DBG("msgRecv=%d\n", msgRecv);
-				KT0803L_getFreq(&val);
 				
-				if(val>=860 && val<=1070)
+				if(KT0803L_getFreq(&val)>=0)
 					bufSend=makeRawMsg(MSG_GET_CHANNEL_REPLY, "0;%d", val);
 				else
 					bufSend=makeRawMsg(MSG_GET_CHANNEL_REPLY, "-1");
