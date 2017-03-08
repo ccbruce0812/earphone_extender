@@ -22,8 +22,6 @@
 		<script language="javascript">
 			const MSG_SET_CHANNEL			="MSG_SET_CHANNEL";
 			const MSG_GET_CHANNEL			="MSG_GET_CHANNEL";
-			const MSG_SET_CHANNEL_REPLY		="MSG_SET_CHANNEL_REPLY";
-			const MSG_GET_CHANNEL_REPLY		="MSG_GET_CHANNEL_REPLY";
 			
 			var g_webSocket=null;
 			var g_fadeWD=null;
@@ -80,27 +78,29 @@
 					
 					if(arr.length>1)
 						arg=arr[1].split(";");
-				
-					switch(msg) {
-						case "MSG_SET_CHANNEL_REPLY": {
-							if(arg[0]<0)
-								console.log("Failed");
-							noFade();
-							break;
-						}
-
-						case "MSG_GET_CHANNEL_REPLY": {
-							var obj=$('#inpCh');
 						
-							obj.val(arg[0]);
-							syncCh();
-							noFade();
-							break;
-						}
+					if(arg[0]>=0) {
+						switch(msg) {
+							case "MSG_GET_CHANNEL_REPLY": {
+								var obj=$('#inpCh');
+								
+								obj.val(arg[1]);
+								syncCh();
+								noFade();
+								break;
+							}
 
-						default:
-							break;
-					}
+							case "MSG_SET_CHANNEL_REPLY": {
+								noFade();
+								break;
+							}
+							
+							default:
+								console.log("Unsupported message received. '"+evt.data+"'");
+								break;
+						}
+					} else
+						console.log("Unqualified message received. '"+evt.data+"'");
 				};
 
 				fade(5000);
@@ -110,7 +110,7 @@
 				var obj0=$('#inpCh'),
 					obj1=$('#txtCh');
 			
-				obj1.html((obj0.val()/10)+"MHz");
+				obj1.html((obj0.val()/10)+" MHz");
 			}
 
 			function onCh() {
@@ -124,24 +124,20 @@
 	</head>
 	
 	<body>
-		<div class="header">Home
+		<div class="header black-white">Home
 			<div style="float: right">
 				<a class="link" href="/<!--#page-->">Home</a>&nbsp|
 				<a class="link" href="/info.ssi">System Information</a>&nbsp|
 				<a class="link" href="/setWiFi.ssi">Setting</a>
 			</div>
 		</div>
-		<div class="main">
-			<div class="row" style="height: 40px">
-				<div class="grid" style="width: 30%; font-size: 16px">Channel</div>
-				<div class="grid" style="width: 70%; text-align: right">
-					<div class="grid" style="width: 60%">
-						<input class="slider" id="inpCh" type="range" min="860" max="1070" step="10" value="960" onmouseup="onCh()">
-					</div>
-					<div class="grid" style="width: 40%">
-						<label id="txtCh"></label>
-					</div>
-				</div>
+		<div class="main gray-white">
+			<div class="row light_gray-white">
+				<div class="grid gray-white" style="width: 30%">Channel</div>
+				<div class="grid gray-white" style="width: 69%; float: right; text-align: right" id="txtCh">96 MHz</div>
+                <div class="grid gray-white" style="width: 100%; clear: left; margin-top: 5px">
+                    <input class="slider" id="inpCh" type="range" min="860" max="1070" step="10" value="960" onmouseup="onCh()">
+                </div>
 			</div>
 		</div>
 		<div id="divFade" class="fade" style="visibility: hidden"></div>

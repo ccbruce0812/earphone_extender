@@ -42,7 +42,7 @@ void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsig
 				char val[256];
 				
 				staTab2Str(val);
-				bufSend=makeRawMsg(MSG_GET_STA_LIST_REPLY, "%s", val);
+				bufSend=makeRawMsg(MSG_GET_STA_LIST_REPLY, "0;%s", val);
 				
 				DBG("bufSend=%s\n", bufSend);
 				websocket_write(pcb, (unsigned char *)bufSend, strlen(bufSend), WS_TEXT_MODE);

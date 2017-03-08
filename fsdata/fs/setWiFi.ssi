@@ -7,36 +7,37 @@
 		<title>HTTP Server</title>
 		<link rel="stylesheet" type="text/css" href="style/style.css">
 	</head>
+
 	<body>
-		<div class="header">Set WiFi</div>
+		<div class="header black-white">Set WiFi</div>
 		<form action="/cmdSvr.cgi" method="get">
 			<input type="hidden" name="action" value="1">
-			<div class="main">
-				<div class="row" style="height: 40px">
-					<div class="grid" style="width: 30%; font-size: 16px">Local SSID</div>
-					<div class="grid" style="width: 70%; text-align: right">
+			<div class="main gray-white">
+				<div class="row light_gray-white">
+					<div class="grid gray-white" style="width: 30%">Local SSID</div>
+					<div class="grid gray-white" style="width: 69%; float: right">
 						<input class="input" type="text" name="lcSSID" maxlength="31" value="<!--#lcSSID-->">
 					</div>
 				</div>
-				<div class="row" style="height: 40px">
-					<div class="grid" style="width: 30%; font-size: 16px">Local Password</div>
-					<div class="grid" style="width: 70%; text-align: right">
+				<div class="row light_gray-white">
+					<div class="grid gray-white" style="width: 30%">Local Password</div>
+					<div class="grid gray-white" style="width: 69%; float: right">
                     	<input class="input" type="password" name="lcPass" maxlength="31" value="">
                     </div>
 				</div>
-				<div class="row" style="height: 40px">
-					<div class="grid" style="width: 30%; font-size: 16px">SSID</div>
-					<div class="grid" style="width: 70%; text-align: right">
+				<div class="row light_gray-white">
+					<div class="grid gray-white" style="width: 30%">SSID</div>
+					<div class="grid gray-white" style="width: 69%; float: right">
                     	<input class="input" type="text" name="apSSID" maxlength="31" value="<!--#apSSID-->">
                     </div>
 				</div>
-				<div class="row" style="height: 40px">
-					<div class="grid" style="width: 30%; font-size: 16px">Password</div>
-					<div class="grid" style="width: 70%; text-align: right">
+				<div class="row light_gray-white">
+					<div class="grid gray-white" style="width: 30%">Password</div>
+					<div class="grid gray-white" style="width: 69%; float: right">
                     	<input class="input" type="password" name="apPass" maxlength="63" value="">
               		</div>
 				</div>
-				<div class="row" style="height: 40px">
+				<div class="row light_gray-white">
 					<input type="submit" class="button" value="Submit" on>
 				</div>
 			</div>

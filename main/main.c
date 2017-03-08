@@ -48,9 +48,17 @@ static void onFakeTXRenew(void *param) {
 }
 #endif
 
+void onScan(void *arg, sdk_scan_status_t status) {
+	DBG("onScan, status=%d\n", status);
+}
+
 static void msgTask(void *param) {
 	Msg msgRecv={0};
 
+	struct sdk_scan_config cfg;
+	
+	sdk_wifi_station_scan(&cfg, onScan);
+	
 	CMDSVR_init();
 
 	gpio_write(LED_PIN, true);

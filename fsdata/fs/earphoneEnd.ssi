@@ -26,12 +26,6 @@
 			const MSG_GET_VOLUME			="MSG_GET_VOLUME";
 			const MSG_SET_UNMUTE			="MSG_SET_UNMUTE";
 			const MSG_GET_UNMUTE			="MSG_GET_UNMUTE";
-			const MSG_GET_STA_LIST_REPLY	="MSG_GET_STA_LIST_REPLY";
-			const MSG_SET_STA_REPLY			="MSG_SET_STA_REPLY";
-			const MSG_SET_VOLUME_REPLY		="MSG_SET_VOLUME_REPLY";
-			const MSG_GET_VOLUME_REPLY		="MSG_GET_VOLUME_REPLY";
-			const MSG_SET_UNMUTE_REPLY		="MSG_SET_UNMUTE_REPLY";
-			const MSG_GET_UNMUTE_REPLY		="MSG_GET_UNMUTE_REPLY";
 		
 			var g_webSocket=null;
 			var g_fadeWD=0;
@@ -86,69 +80,64 @@
 					
 					if(arr.length>1)
 						arg=arr[1].split(";");
-				
-					switch(msg) {
-						case "MSG_GET_STA_LIST_REPLY": {
-							var oldTX=!g_tx.length?"":g_tx[$('#inpTX').val()];
 						
-							g_tx=[];
-							arg.forEach(function(item, idx) {
-								var tmp=item.split(":");
+					if(arg[0]>=0) {
+						switch(msg) {
+							case "MSG_GET_STA_LIST_REPLY": {
+								var obj=$('#inpSta'),
+									now=obj.val();
+									found=false;
+
+								obj.html("");
+								arg.forEach(function(item, index) {
+									if(item==now)
+										found=true;
+									obj.append('<option value="'+item+'">'+item+'</option>');
+								});
+								obj.html('<option value="none">none</option>');
 								
-								if(tmp.length>=2)
-									g_tx.push({
-										name: tmp[0],
-										channel: tmp[1]
-									});
-							});
+								obj.val(found?now:"none");
+								break;
+							}
+
+							case "MSG_SET_STA_REPLY": {
+								var obj=$('#txtCh');
 							
-							$('#inpTX').prop("min", 0);
-							$('#inpTX').prop("max", g_tx.length-1);
-							$('#txtTX').html("");
-							$('#txtCh').html("");
+								obj.html(arg[1]);
+								noFade();
+								break;
+							}
+
+							case "MSG_GET_VOLUME_REPLY": {
+								var obj=$('#inpVol');
+								
+								obj.val(arg[1]);
+								syncVol();
+								noFade();
+								break;
+							}
+
+							case "MSG_GET_UNMUTE_REPLY": {
+								var obj=$('#inpMute');
+								
+								obj.prop("checked", arg[1]=="0"?true:false);
+								syncMute();
+								noFade();
+								break;
+							}
+
+							case "MSG_SET_VOLUME_REPLY":
+							case "MSG_SET_UNMUTE_REPLY": {
+								noFade();
+								break;
+							}
 							
-							g_tx.forEach(function(item, idx) {
-								if(item.name==oldTX.name) {
-									$('#inpTX').val(idx);
-									$('#txtTX').html(item.name);
-									$('#txtCh').html(item.channel);
-									
-									if(item.channel!=oldTX.channel) {
-										g_webSocket.send(MSG_SET_CHANNEL+","+$('#txtCh').html());
-										fade(5000);
-									}
-								}
-							});
-							break;
+							default:
+								console.log("Unsupported message received. '"+evt.data+"'");
+								break;
 						}
-
-						case "MSG_SET_STA_REPLY":
-							noFade();
-							break;
-
-						case "MSG_SET_VOLUME_REPLY":
-							$('#txtVol').html(arg[0]);
-							$('#inpVol').val(arg[0]);
-							noFade();
-							break;
-
-						case "MSG_GET_VOLUME_REPLY":
-							noFade();
-							break;
-
-						case "MSG_SET_UNMUTE_REPLY":
-							$('#inpMute').prop("checked", arg[0]=="0"?true:false);
-							$('#inpVol').prop("disabled", arg[0]=="0"?true:false);
-							noFade();
-							break;
-
-						case "MSG_GET_UNMUTE_REPLY":
-							noFade();
-							break;
-
-						default:
-							break;
-					}
+					} else
+						console.log("Unqualified message received. '"+evt.data+"'");
 				};
 				
 				g_probeWD=setInterval(function() {
@@ -156,17 +145,10 @@
 				}, 10000);
 			});
 
-			function syncSta() {
-				var obj0=$('#inpVol'),
-					obj1=$('#txtVol');
-					
-				obj1.html(obj0.val());
-			}
-			
 			function onSta() {
-				g_webSocket.send(MSG_SET_CHANNEL+","+$('#txtCh').html());
-				$('#txtTX').html(g_tx[$('#inpTX').val()].name);
-				$('#txtCh').html(g_tx[$('#inpTX').val()].channel);
+				var obj=$('#inpSta');
+			
+				g_webSocket.send(MSG_SET_STA+","+obj.val());
 				fade(5000);
 			}
 
@@ -203,44 +185,33 @@
 	</head>
 	
 	<body>
-		<div class="header">Home
+		<div class="header black-white">Home
 			<div style="float: right">
 				<a class="link" href="/<!--#page-->">Home</a>&nbsp|
 				<a class="link" href="/info.ssi">System Information</a>&nbsp|
 				<a class="link" href="/setWiFi.ssi">Setting</a>
 			</div>
 		</div>
-		<div class="main">
-			<div class="row" style="height: 40px">
-				<div class="grid" style="width: 30%; font-size: 16px">Station</div>
-				<div class="grid" style="width: 70%; text-align: right">
-					<div class="grid" style="width: 60%">
-						<select id="inpSta" onmouseup="onSta()">
-							<option value="none">none</option>
-						</select>
-					</div>
-					<div class="grid" style="width: 40%">
-						<label id="txtSta"></label>
-					</div>
+		<div class="main gray-white">
+			<div class="row light_gray-white">
+				<div class="grid gray-white" style="width: 30%">Station</div>
+				<div class="grid gray-white" style="width: 69%; float: right">
+					<select class="list" id="inpSta" onmouseup="onSta()">
+						<option value="none">none</option>
+					</select>
 				</div>
 			</div>
-			<div class="row" style="height: 40px">
-				<div class="grid" style="width: 30%; font-size: 16px">Channel</div>
-				<div class="grid" style="width: 70%; text-align: right" id="txtCh"></div>
+			<div class="row light_gray-white">
+				<div class="grid gray-white" style="width: 30%">Channel</div>
+				<div class="grid gray-white" style="width: 69%; float: right; text-align: right" id="txtCh">96 MHz</div>
 			</div>
-			<div class="row" style="height: 40px">
-				<div class="grid" style="width: 30%; font-size: 16px">Volume</div>
-				<div class="grid" style="width: 70%; text-align: right">
-					<div class="grid" style="width: 40%">
-						<input class="slider" id="inpVol" type="range" min="1" max="15" value="1" onmouseup="onVol()">
-					</div>
-					<div class="grid" style="width: 20%">
-						<input id="inpMute" type="checkbox" onmouseup="onMute()">Mute
-					</div>
-					<div class="grid" style="width: 40%">
-						<label id="txtVol">1</label>
-					</div>
-				</div>
+			<div class="row light_gray-white">
+				<div class="grid gray-white" style="width: 30%">Volume</div>
+				<div class="grid gray-white" style="width: 69%; float: right; text-align: right" id="txtVol">1</div>
+                <div class="grid gray-white" style="width: 100%; clear: left; margin-top: 5px">
+                	<input class="slider" style="width: 80%" id="inpVol" type="range" min="1" max="15" value="1" onmouseup="onVol()">
+                	<input id="inpMute" type="checkbox" onmouseup="onMute()">Mute
+                </div>
 			</div>
 		</div>
 		<div id="divFade" class="fade" style="visibility: hidden"></div>
