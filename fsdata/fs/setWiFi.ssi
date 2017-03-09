@@ -6,10 +6,36 @@
 		<link rel="shortcut icon" href="img/favicon.png">
 		<title>HTTP Server</title>
 		<link rel="stylesheet" type="text/css" href="style/style.css">
+		<script language="javascript">
+			function getParam(qstr, field) {
+				var regex=new RegExp("[?&]"+field.replace(/[\[\]]/g, "\\$&")+"(=([^&#]*)|&|#|$)"),
+					res=regex.exec(qstr);
+
+				if(!res)
+					return null;
+
+				if(!res[2])
+					return '';
+
+				return decodeURIComponent(res[2].replace(/\+/g, " "));
+			}
+			
+			window.addEventListener("load", function () {
+				if(getParam(window.location.href, "showLinks")=="1")
+					document.getElementById("divLinks").style.display="inherit";
+			});
+				
+		</script>
 	</head>
 
 	<body>
-		<div class="header black-white">Set WiFi</div>
+		<div class="header black-white">Setting
+			<div style="float: right; display: none" id="divLinks">
+				<a style="font-size: 12px" href="/<!--#page-->">Home</a>&nbsp|
+				<a style="font-size: 12px" href="/info.ssi">System Information</a>&nbsp|
+				<div style="font-size: 12px; display: inline-block">Setting</div>
+			</div>
+		</div>
 		<form action="/cmdSvr.cgi" method="get">
 			<input type="hidden" name="action" value="1">
 			<div class="main gray-white">

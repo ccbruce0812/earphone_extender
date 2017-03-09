@@ -41,6 +41,8 @@ void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsig
 			case MSG_GET_STA_LIST: {
 				char val[256];
 				
+				DBG("msgRecv=%d\n", msgRecv);
+				
 				staTab2Str(val);
 				bufSend=makeRawMsg(MSG_GET_STA_LIST_REPLY, "0;%s", val);
 				
@@ -54,11 +56,27 @@ void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsig
 				
 				DBG("msgRecv=%d, arg=%s\n", msgRecv, arg[0]);
 
-				if(getStaFreq(arg[0], &val)>=0 &&
-					RDA5807M_setFreq(val)>=0) {
-					bufSend=makeRawMsg(MSG_SET_STA_REPLY, "0;%d", val);
-				} else
-					bufSend=makeRawMsg(MSG_SET_STA_REPLY, "-1");
+				if(!strcmp(arg[0], "none")) {
+					RDA5807M_enableOutput(RDA5807M_FALSE);
+					bufSend=makeRawMsg(MSG_SET_STA_REPLY, "0;-1");
+				} else {
+					if(getStaFreq(arg[0], &val)>=0 &&
+						RDA5807M_enableOutput(RDA5807M_TRUE)>=0 &&
+						RDA5807M_setFreq(val)>=0) {
+						bufSend=makeRawMsg(MSG_SET_STA_REPLY, "0;%d", val);
+					} else
+						bufSend=makeRawMsg(MSG_SET_STA_REPLY, "-1");
+				}
+
+				DBG("bufSend=%s\n", bufSend);
+				websocket_write(pcb, (unsigned char *)bufSend, strlen(bufSend), WS_TEXT_MODE);
+				break;
+			}
+			
+			case MSG_GET_STA: {
+				DBG("msgRecv=%d\n", msgRecv);
+				
+				bufSend=makeRawMsg(MSG_GET_STA_REPLY, "0;Test0;96000");
 
 				DBG("bufSend=%s\n", bufSend);
 				websocket_write(pcb, (unsigned char *)bufSend, strlen(bufSend), WS_TEXT_MODE);
@@ -81,7 +99,7 @@ void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsig
 			case MSG_GET_VOLUME: {
 				unsigned char val;
 				
-				DBG("msgRecv=%d, arg=%s\n", msgRecv, arg[0]);
+				DBG("msgRecv=%d\n", msgRecv);
 				
 				if(RDA5807M_getVolume(&val)>=0)
 					bufSend=makeRawMsg(MSG_GET_VOLUME_REPLY, "0;%d", val);

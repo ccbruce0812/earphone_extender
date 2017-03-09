@@ -12,9 +12,9 @@
 	<body>
 		<div class="header black-white">System Information
 			<div style="float: right">
-				<a class="link" href="/<!--#page-->">Home</a>&nbsp|
-				<a class="link" href="/info.ssi">System Information</a>&nbsp|
-				<a class="link" href="/setWiFi.ssi">Setting</a>
+				<a style="font-size: 12px" href="/<!--#page-->">Home</a>&nbsp|
+				<div style="font-size: 12px; display: inline-block">System Information</div>&nbsp|
+				<a style="font-size: 12px" href="/setWiFi.ssi?showLinks=1">Setting</a>
 			</div>
 		</div>
 		<div class="main gray-white">
@@ -24,7 +24,7 @@
 			</div>
 			<div class="row light_gray-white">
 				<div class="grid gray-white" style="width: 30%">Local SSID</div>
-				<div class="grid gray-white" style="width: 69%; float: right; text-align: right"><!--#locSSID--></div>
+				<div class="grid gray-white" style="width: 69%; float: right; text-align: right"><!--#lcSSID--></div>
 			</div>
 			<div class="row light_gray-white">
 				<div class="grid gray-white" style="width: 30%">SSID</div>

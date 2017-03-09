@@ -18,7 +18,8 @@
 				position:   fixed;
 			}
 		</style>
-		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+		<!--<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>-->
+		<script src="script/jquery_3.1.1.min.js"></script>
 		<script language="javascript">
 			const MSG_SET_CHANNEL			="MSG_SET_CHANNEL";
 			const MSG_GET_CHANNEL			="MSG_GET_CHANNEL";
@@ -80,11 +81,12 @@
 						arg=arr[1].split(";");
 						
 					if(arg[0]>=0) {
+						arg.shift();
 						switch(msg) {
 							case "MSG_GET_CHANNEL_REPLY": {
 								var obj=$('#inpCh');
 								
-								obj.val(arg[1]);
+								obj.val(arg[0]);
 								syncCh();
 								noFade();
 								break;
@@ -126,9 +128,9 @@
 	<body>
 		<div class="header black-white">Home
 			<div style="float: right">
-				<a class="link" href="/<!--#page-->">Home</a>&nbsp|
-				<a class="link" href="/info.ssi">System Information</a>&nbsp|
-				<a class="link" href="/setWiFi.ssi">Setting</a>
+				<div style="font-size: 12px; display: inline-block">Home</div>&nbsp|
+				<a style="font-size: 12px" href="/info.ssi">System Information</a>&nbsp|
+				<a style="font-size: 12px" href="/setWiFi.ssi?showLinks=1">Setting</a>
 			</div>
 		</div>
 		<div class="main gray-white">
