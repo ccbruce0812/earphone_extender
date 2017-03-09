@@ -8,8 +8,8 @@
 		<link rel="stylesheet" type="text/css" href="style/style.css">
 	</head>
 	<body>
-		<div class="header">WiFi is ready</div>
-		<div class="main" style="font-size: 16px">
+		<div class="header black-white">WiFi is ready</div>
+		<div class="main gray-white" style="font-size: 16px">
 			Connect your mobile device to '<!--#apSSID-->' and click this <a href="http://<!--#ip-->/<!--#page-->">link</a> to continue.<br>
 			You can also <a href="/setWiFi.ssi">go back</a> to set WiFi again.
 		</div>
