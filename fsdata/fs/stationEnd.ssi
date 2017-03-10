@@ -57,11 +57,68 @@
 				$('#divFade').css("visibility", "hidden");
 			}
 			
+			function onWSMsgInit(evt) {
+				var arr=evt.data.split(",");
+				var msg=arr[0];
+				var arg=null;
+				
+				if(arr.length>1)
+					arg=arr[1].split(";");
+					
+				if(arg[0]>=0) {
+					arg.shift();
+					switch(msg) {
+						case "MSG_GET_CHANNEL_REPLY": {
+							var obj=$('#inpCh');
+							
+							obj.val(arg[0]);
+							syncCh();
+							break;
+						}
+						
+						default:
+							console.log("Unsupported message received. '"+evt.data+"'");
+							break;
+					}
+				} else
+					console.log("Unqualified message received. '"+evt.data+"'");
+			}
+			
+			function onWSMsg(evt) {
+				var arr=evt.data.split(",");
+				var msg=arr[0];
+				var arg=null;
+				
+				if(arr.length>1)
+					arg=arr[1].split(";");
+					
+				if(arg[0]>=0) {
+					arg.shift();
+					switch(msg) {
+						case "MSG_SET_CHANNEL_REPLY": {
+							noFade();
+							break;
+						}
+						
+						default:
+							console.log("Unsupported message received. '"+evt.data+"'");
+							break;
+					}
+				} else
+					console.log("Unqualified message received. '"+evt.data+"'");
+			}
+			
 			window.addEventListener("load", function () {
+				var init=new Init(onWSMsgInit, 1, function() {
+					g_webSocket.onmessage=onWSMsg;
+					
+					noFade();
+				});
+			
 				g_webSocket=new WebSocket("ws://"+window.location.hostname+"/CmdSvr.ws");
 
 				g_webSocket.onopen=function(evt) {
-					console.log("onopen");
+					g_webSocket.send(MSG_GET_CHANNEL);
 				};
 
 				g_webSocket.onclose=function(evt) {
@@ -72,38 +129,7 @@
 					console.log("onerror");
 				};
 				
-				g_webSocket.onmessage=function(evt) {
-					var arr=evt.data.split(",");
-					var msg=arr[0];
-					var arg=null;
-					
-					if(arr.length>1)
-						arg=arr[1].split(";");
-						
-					if(arg[0]>=0) {
-						arg.shift();
-						switch(msg) {
-							case "MSG_GET_CHANNEL_REPLY": {
-								var obj=$('#inpCh');
-								
-								obj.val(arg[0]);
-								syncCh();
-								noFade();
-								break;
-							}
-
-							case "MSG_SET_CHANNEL_REPLY": {
-								noFade();
-								break;
-							}
-							
-							default:
-								console.log("Unsupported message received. '"+evt.data+"'");
-								break;
-						}
-					} else
-						console.log("Unqualified message received. '"+evt.data+"'");
-				};
+				g_webSocket.onmessage=init.m_callback;
 
 				fade(5000);
 			});
@@ -112,7 +138,7 @@
 				var obj0=$('#inpCh'),
 					obj1=$('#txtCh');
 			
-				obj1.html((obj0.val()/10)+" MHz");
+				obj1.html((obj0.val()/10).toFixed(2)+"MHz");
 			}
 
 			function onCh() {
@@ -136,12 +162,12 @@
 		<div class="main gray-white">
 			<div class="row light_gray-white">
 				<div class="grid gray-white" style="width: 30%">Channel</div>
-				<div class="grid gray-white" style="width: 69%; float: right; text-align: right" id="txtCh">96 MHz</div>
+				<div class="grid gray-white" style="width: 69%; float: right; text-align: right" id="txtCh">96.00MHz</div>
                 <div class="grid gray-white" style="width: 100%; clear: left; margin-top: 5px">
                     <input class="slider" id="inpCh" type="range" min="860" max="1070" step="10" value="960" onmouseup="onCh()">
                 </div>
 			</div>
 		</div>
-		<div id="divFade" class="fade" style="visibility: hidden"></div>
+		<div id="divFade" class="fade" style="visibility: visible"></div>
 	</body>
 </html>

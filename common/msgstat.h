@@ -8,12 +8,17 @@ extern "C" {
 #define MSG_MIN					(0)
 #define MSG_KEY_PRESSED			(MSG_MIN+1)
 
-#define STAT_MIN				(0)
-#define STAT_DISCONNECTED		(STAT_MIN+1)
-#define STAT_CONNECTED			(STAT_MIN+2)
+#ifdef EARPHONE_END
+#define MSG_STATAB_RENEW		(MSG_MIN+2)
+#define MSG_STATAB_LEAVE		(MSG_MIN+3)
+#endif
 
-typedef struct {
+#define STAT_MIN				(0)
+#define STAT_IDLE				(STAT_MIN+1)
+
+typedef struct __attribute__((packed)) {
 	unsigned int id;
+	void *param;
 } Msg;
 
 #ifdef __cplusplus

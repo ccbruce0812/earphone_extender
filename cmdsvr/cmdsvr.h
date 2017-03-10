@@ -5,8 +5,8 @@
 extern "C" {
 #endif
 
-void CMDSVR_init(void);
-void CMDSVR_renewStaTab(const char *name, unsigned long freq);
+int CMDSVR_init(void);
+int CMDSVR_renewStaTab(const char *name, unsigned long freq);
 
 #ifdef __cplusplus
 }

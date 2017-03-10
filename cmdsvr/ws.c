@@ -25,6 +25,9 @@
 #include "ws.h"
 
 #ifdef EARPHONE_END
+
+static char g_curSta[32]="none";
+
 void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsigned char mode) {
 	char *bufRecv=malloc(len+1);
 	unsigned short msgRecv=MSG_MIN;
@@ -56,17 +59,24 @@ void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsig
 				
 				DBG("msgRecv=%d, arg=%s\n", msgRecv, arg[0]);
 
-				if(!strcmp(arg[0], "none")) {
-					RDA5807M_enableOutput(RDA5807M_FALSE);
-					bufSend=makeRawMsg(MSG_SET_STA_REPLY, "0;-1");
-				} else {
-					if(getStaFreq(arg[0], &val)>=0 &&
-						RDA5807M_enableOutput(RDA5807M_TRUE)>=0 &&
-						RDA5807M_setFreq(val)>=0) {
-						bufSend=makeRawMsg(MSG_SET_STA_REPLY, "0;%d", val);
-					} else
-						bufSend=makeRawMsg(MSG_SET_STA_REPLY, "-1");
-				}
+				if(strlen(arg[0])) {
+					if(!strcmp(arg[0], "none")) {
+						RDA5807M_enableOutput(RDA5807M_FALSE);
+						strcpy(g_curSta, "none");
+						bufSend=makeRawMsg(MSG_SET_STA_REPLY, "0;-1");
+					} else {
+						if(getStaFreq(arg[0], &val)>=0) {
+							if(RDA5807M_enableOutput(RDA5807M_TRUE)>=0 &&
+								RDA5807M_setFreq(val)>=0) {
+								strncpy(g_curSta, arg[0], 32);
+								bufSend=makeRawMsg(MSG_SET_STA_REPLY, "0;%d", val);
+							} else
+								bufSend=makeRawMsg(MSG_SET_STA_REPLY, "-1");
+						} else
+							xxx
+					}
+				} else
+					bufSend=makeRawMsg(MSG_SET_STA_REPLY, "-1");
 
 				DBG("bufSend=%s\n", bufSend);
 				websocket_write(pcb, (unsigned char *)bufSend, strlen(bufSend), WS_TEXT_MODE);
@@ -74,9 +84,14 @@ void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsig
 			}
 			
 			case MSG_GET_STA: {
+				unsigned long val;
+				
 				DBG("msgRecv=%d\n", msgRecv);
 				
-				bufSend=makeRawMsg(MSG_GET_STA_REPLY, "0;Test0;96000");
+				if(getStaFreq(g_curSta, &val)<0)
+					val=-1;
+				
+				bufSend=makeRawMsg(MSG_GET_STA_REPLY, "0;%s;%d", g_curSta, (long)val);
 
 				DBG("bufSend=%s\n", bufSend);
 				websocket_write(pcb, (unsigned char *)bufSend, strlen(bufSend), WS_TEXT_MODE);

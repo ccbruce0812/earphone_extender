@@ -27,39 +27,46 @@
 #include "../common/msgstat.h"
 #include "../common/pindef.h"
 #include "../cmdsvr/cmdsvr.h"
+#include "../discovery/discovery.h"
 
+//ETSTimer g_timer={0};
 QueueHandle_t g_msgQ=NULL;
-ETSTimer g_timer={0};
-unsigned char g_curStat=STAT_DISCONNECTED;
-
-/*
-static void onBlinkLED(void *param) {
-	static bool stat=false;
-	
-	gpio_write(LED_PIN, stat);
-	stat=!stat;
-}
-*/
+unsigned char g_curStat=STAT_IDLE;
 
 #ifdef EARPHONE_END
-static void onFakeTXRenew(void *param) {
-	CMDSVR_renewStaTab("Test0", 96000);
-	CMDSVR_renewStaTab("Test1", 97000);
+void onRenew(void *context, const DISCOVERY_Dev *dev) {
+	Msg msg={
+		.id=MSG_STATAB_RENEW,
+		.param=NULL
+	};
+
+	if(!(msg.param=malloc(sizeof(DISCOVERY_Dev)))) {
+		DBG("Failed to invoke malloc().\n");
+		return;
+	}
+	
+	memcpy(msg.param, dev, sizeof(DISCOVERY_Dev));
+	if(xQueueSend(g_msgQ, &msg, 0)==errQUEUE_FULL) {
+		DBG("Failed to invoke xQueueSend(). Queue is full.\n");
+		free(msg.param);
+	}
+}
+
+void onLeave(void *context, const DISCOVERY_Dev *dev) {
+	DBG("No action yet.\n");
 }
 #endif
 
-void onScan(void *arg, sdk_scan_status_t status) {
-	DBG("onScan, status=%d\n", status);
-}
-
 static void msgTask(void *param) {
 	Msg msgRecv={0};
-
-	struct sdk_scan_config cfg;
-	
-	sdk_wifi_station_scan(&cfg, onScan);
 	
 	CMDSVR_init();
+
+#ifdef EARPHONE_END
+	DISCOVERY_initSvr(&g_msgQ, onRenew, onLeave);
+#else
+	DISCOVERY_init(&g_msgQ);
+#endif
 
 	gpio_write(LED_PIN, true);
 	
@@ -68,22 +75,27 @@ static void msgTask(void *param) {
 		
 		switch(msgRecv.id) {
 			case MSG_KEY_PRESSED: {
-				switch(g_curStat) {
-					case STAT_DISCONNECTED: {
-						DBG("WiFi is not OK.\n");
-						break;
-					}
-					
-					case STAT_CONNECTED:
-						DBG("WiFi is OK.\n");
-						break;
-						
-					default:
-						;
-				}
-
+				DBG("Do something here.\n");
 				break;
 			}
+
+#ifdef EARPHONE_END
+			case MSG_STATAB_RENEW: {
+				DISCOVERY_Dev *dev=(DISCOVERY_Dev *)msgRecv.param;
+				
+				if(!dev) {
+					DBG("Unexpected situation. Check your code.\n");
+					assert(false);
+				}
+
+				CMDSVR_renewStaTab(dev->name, dev->freq);
+				free(dev);
+				break;
+			}
+			
+			case MSG_STATAB_LEAVE:
+				break;
+#endif
 				
 			default:
 				;
@@ -99,7 +111,8 @@ static void onGPIO(unsigned char num) {
 		now=xTaskGetTickCount();
 		if(now-prev>=MSEC2TICKS(50)) {
 			Msg msg={
-				.id=MSG_KEY_PRESSED
+				.id=MSG_KEY_PRESSED,
+				.param=NULL
 			};
 			
 			prev=now;
@@ -112,7 +125,7 @@ static void initFS(void) {
     esp_spiffs_init();
 
     if(esp_spiffs_mount()!=SPIFFS_OK) {
-        DBG("Failed to mount SPIFFS\n");
+        DBG("Failed to mount SPIFFS.\n");
 		assert(false);
     }
 }
@@ -227,12 +240,7 @@ void user_init(void) {
 	i2c_init(SCL_PIN, SDA_PIN);
 	initFM();
 	initWiFi();
-
-#ifdef EARPHONE_END
-	sdk_ets_timer_setfn(&g_timer, onFakeTXRenew, NULL);
-	sdk_ets_timer_arm(&g_timer, 5000, true);
-#endif
-
+	
 	g_msgQ=xQueueCreate(8, sizeof(Msg));
 	xTaskCreate(msgTask, "msgTask", 512, NULL, 4, NULL);
 }

@@ -60,7 +60,7 @@
 				$('#divFade').css("visibility", "hidden");
 			}
 			
-			function DelayInit(handler, limit, action) {
+			function Init(handler, limit, action) {
 				this.m_count=limit;
 				this.m_callback=function(evt) {
 					handler(evt);
@@ -70,120 +70,128 @@
 				}.bind(this);
 			}
 			
-			window.addEventListener("load", function () {
-				var delayInit=new DelayInit(function(evt) {
-					var arr=evt.data.split(",");
-					var msg=arr[0];
-					var arg=null;
+			function onWSMsgInit(evt) {
+				var arr=evt.data.split(",");
+				var msg=arr[0];
+				var arg=null;
+				
+				if(arr.length>1)
+					arg=arr[1].split(";");
 					
-					if(arr.length>1)
-						arg=arr[1].split(";");
-						
-					if(arg[0]>=0) {
-						arg.shift();
-						switch(msg) {
-							case "MSG_GET_STA_LIST_REPLY": {
-								var obj=$('#inpSta'),
-									now=obj.val();
-									found=false;
-								obj.html("");
-								arg.forEach(function(item, index) {
-									if(item==now)
-										found=true;
-									obj.append('<option value="'+item+'">'+item+'</option>');
-								});
-								obj.append('<option value="none">none</option>');
+				if(arg[0]>=0) {
+					arg.shift();
+					switch(msg) {
+						case "MSG_GET_STA_LIST_REPLY": {
+							var obj=$('#inpSta'),
+								now=obj.val();
+								found=false;
 								
-								obj.val(found?now:"none");
-								break;
-							}
-
-							case "MSG_GET_STA_REPLY": {
-								var obj=$('#inpSta'),
-									obj2=$('#txtCh');
-								
-								obj.val(arg[0]);
-								obj2.html(arg[1]<0?"N/A":(Number(arg[1])/1000).toFixed(2)+"MHz");
-								break;
-							}
+							obj.html("");
+							arg.forEach(function(item, index) {
+								if(item=="")
+									return;
+								if(item==now)
+									found=true;
+								obj.append('<option value="'+item+'">'+item+'</option>');
+							});
 							
-							case "MSG_GET_VOLUME_REPLY": {
-								var obj=$('#inpVol');
-								
-								obj.val(arg[0]);
-								syncVol();
-								break;
-							}
-
-							case "MSG_GET_UNMUTE_REPLY": {
-								var obj=$('#inpMute');
-	
-								obj.prop("checked", !Number(arg[0])?true:false);
-								syncMute();
-								break;
-							}
-
-							default:
-								console.log("Unsupported message received. '"+evt.data+"'");
-								break;
+							obj.val(found?now:"none");
+							break;
 						}
-					} else
-						console.log("Unqualified message received. '"+evt.data+"'");
-				},
-				4,
-				function() {
-					g_webSocket.onmessage=function(evt) {
-						var arr=evt.data.split(",");
-						var msg=arr[0];
-						var arg=null;
-						
-						if(arr.length>1)
-							arg=arr[1].split(";");
-							
-						if(arg[0]>=0) {
-							arg.shift();
-							switch(msg) {
-								case "MSG_GET_STA_LIST_REPLY": {
-									var obj=$('#inpSta'),
-										now=obj.val();
-										found=false;
-									obj.html("");
-									arg.forEach(function(item, index) {
-										if(item==now)
-											found=true;
-										obj.append('<option value="'+item+'">'+item+'</option>');
-									});
-									obj.append('<option value="none">none</option>');
-									
-									obj.val(found?now:"none");
-									break;
-								}
-							
-								case "MSG_SET_STA_REPLY": {
-									var obj=$('#txtCh');
-								
-									obj.html(arg[0]<0?"N/A":(Number(arg[0])/1000).toFixed(2)+"MHz");
-									noFade();
-									break;
-								}
 
-								case "MSG_SET_VOLUME_REPLY":
-								case "MSG_SET_UNMUTE_REPLY": {
-									noFade();
-									break;
-								}
-								
-								default:
-									console.log("Unsupported message received. '"+evt.data+"'");
-									break;
-							}
-						} else
-							console.log("Unqualified message received. '"+evt.data+"'");
+						case "MSG_GET_STA_REPLY": {
+							var obj=$('#inpSta'),
+								obj2=$('#txtCh');
+							
+							obj.val(arg[0]);
+							obj2.html(arg[1]<0?"N/A":(Number(arg[1])/1000).toFixed(2)+"MHz");
+							break;
+						}
+						
+						case "MSG_GET_VOLUME_REPLY": {
+							var obj=$('#inpVol');
+							
+							obj.val(arg[0]);
+							syncVol();
+							break;
+						}
+
+						case "MSG_GET_UNMUTE_REPLY": {
+							var obj=$('#inpMute');
+
+							obj.prop("checked", !Number(arg[0])?true:false);
+							syncMute();
+							break;
+						}
+
+						default:
+							console.log("Unsupported message received. '"+evt.data+"'");
+							break;
 					}
+				} else
+					console.log("Unqualified message received. '"+evt.data+"'");
+			}
+			
+			function onWSMsg(evt) {
+				var arr=evt.data.split(",");
+				var msg=arr[0];
+				var arg=null;
+				
+				if(arr.length>1)
+					arg=arr[1].split(";");
 					
+				if(arg[0]>=0) {
+					arg.shift();
+					switch(msg) {
+						case "MSG_GET_STA_LIST_REPLY": {
+							var obj=$('#inpSta'),
+								now=obj.val();
+								found=false;
+
+							obj.html("");
+							arg.forEach(function(item, index) {
+								if(item=="")
+									return;
+								if(item==now)
+									found=true;
+								obj.append('<option value="'+item+'">'+item+'</option>');
+							});
+							
+							obj.val(found?now:"none");
+							break;
+						}
+					
+						case "MSG_SET_STA_REPLY": {
+							var obj=$('#txtCh');
+						
+							obj.html(arg[0]<0?"N/A":(Number(arg[0])/1000).toFixed(2)+"MHz");
+							noFade();
+							break;
+						}
+
+						case "MSG_SET_VOLUME_REPLY":
+						case "MSG_SET_UNMUTE_REPLY": {
+							noFade();
+							break;
+						}
+						
+						default:
+							console.log("Unsupported message received. '"+evt.data+"'");
+							break;
+					}
+				} else
+					console.log("Unqualified message received. '"+evt.data+"'");
+			}
+			
+			window.addEventListener("load", function () {
+				var init=new Init(onWSMsgInit, 4, function() {
+					g_webSocket.onmessage=onWSMsg;
+				
 					g_probeWD=setInterval(function() {
 						g_webSocket.send(MSG_GET_STA_LIST);
 					}, 10000);
+					
+					noFade();
 				});
 				
 				g_webSocket=new WebSocket("ws://"+window.location.hostname+"/CmdSvr.ws");
@@ -203,7 +211,7 @@
 					console.log("onerror");
 				};
 				
-				g_webSocket.onmessage=delayInit.m_callback;
+				g_webSocket.onmessage=init.m_callback;
 			});
 
 			function onSta() {
@@ -232,14 +240,13 @@
 				var obj0=$('#inpMute'),
 					obj1=$('#inpVol');
 				
-				console.log(obj0.prop("checked"));
 				obj1.prop("disabled", obj0.prop("checked"));
 			}
 			
 			function onMute() {
 				var obj=$('#inpMute');
 			
-				g_webSocket.send(MSG_SET_UNMUTE+","+(obj.prop("checked")?-1:0));
+				g_webSocket.send(MSG_SET_UNMUTE+","+(obj.prop("checked")?0:-1));
 				syncMute();
 				fade(5000);
 			}
@@ -271,11 +278,11 @@
 				<div class="grid gray-white" style="width: 30%">Volume</div>
 				<div class="grid gray-white" style="width: 69%; float: right; text-align: right" id="txtVol">1</div>
                 <div class="grid gray-white" style="width: 100%; clear: left; margin-top: 5px">
-                	<input class="slider" style="width: 80%" id="inpVol" type="range" min="1" max="15" value="1" onmouseup="onVol()">
-                	<input id="inpMute" type="checkbox" onmouseup="onMute()">Mute
+                	<input class="slider" style="width: 80%" id="inpVol" type="range" min="1" max="15" value="1" onchange="onVol()">
+                	<input id="inpMute" type="checkbox" onchange="onMute()">Mute
                 </div>
 			</div>
 		</div>
-		<div id="divFade" class="fade" style="visibility: hidden"></div>
+		<div id="divFade" class="fade" style="visibility: visible"></div>
 	</body>
 </html>

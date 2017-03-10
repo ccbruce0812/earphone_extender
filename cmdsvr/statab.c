@@ -132,18 +132,12 @@ int staTab2Str(char *str) {
 	
 	taskEXIT_CRITICAL();
 	
-	if(!availItemCnt) {
-		DBG("No item found.\n");
-		return -1;
-	}
-	
 	str[0]='\0';
 	for(i=0;i<availItemCnt;i++) {
 		strcat(str, availItem[i]->name);
-		if(i+1<availItemCnt)
-			strcat(str, ";");
+		strcat(str, ";");
 	}
-	
+	strcat(str, "none");
 	return 0;
 }
 
