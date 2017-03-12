@@ -2,7 +2,7 @@ PROGRAM				= earphone_extender
 EXTRA_COMPONENTS	= extras/i2c extras/httpd extras/mbedtls extras/dhcpserver extras/spiffs
 PROGRAM_SRC_DIR		= . ./common ./main ./cmdsvr ./discovery
 EXTRA_CFLAGS		= -DLWIP_HTTPD_CGI=1 -DLWIP_HTTPD_SSI=1 -DLWIP_HTTPD_SSI_INCLUDE_TAG=0 -I./fsdata
-#EXTRA_CFLAGS		+=-DLWIP_DEBUG=1 -DHTTPD_DEBUG=LWIP_DBG_ON
+#EXTRA_CFLAGS		+=-DLWIP_DEBUG=1 -DHTTPD_DEBUG=1
 
 FLASH_SIZE			= 32
 SPIFFS_BASE_ADDR	= 0x200000

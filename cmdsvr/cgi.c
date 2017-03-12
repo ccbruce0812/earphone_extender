@@ -56,24 +56,26 @@ char *onCGI(int idx, int count, char *param[], char *value[]) {
 			}
 
 			case 1: {
-				InitParam data;
+				InitParam init;
 				struct sdk_softap_config apCfg;
 				struct sdk_station_config staCfg;
 				
 				memset(&apCfg, 0, sizeof(apCfg));
 				sdk_wifi_softap_get_config(&apCfg);
 				if((val=readValue(count, param, value, "lcSSID")) && strlen(val))
-					strncpy((char *)data.locSSID, val, 32);
+					strncpy((char *)init.locSSID, val, 32);
 				if((val=readValue(count, param, value, "lcPass")) && strlen(val))
 					strncpy((char *)apCfg.password, val, 64);
+				else
+					memset(apCfg.password, 0, sizeof(apCfg.password));
 				sdk_wifi_softap_set_config(&apCfg);
 				
-				if(strcmp((char *)data.locSSID, (char *)apCfg.ssid)) {
+				if(strcmp((char *)init.locSSID, (char *)apCfg.ssid)) {
 					int fout=open("initParam", O_WRONLY|O_CREAT, 0);
 					
 					if(fout>=0) {
-						write(fout, &data, sizeof(data));
-						DBG("New local SSID is '%s'.\n", data.locSSID);
+						write(fout, &init, sizeof(init));
+						DBG("New local SSID is '%s'.\n", init.locSSID);
 						close(fout);
 					}
 				}
@@ -84,6 +86,8 @@ char *onCGI(int idx, int count, char *param[], char *value[]) {
 					strncpy((char *)staCfg.ssid, val, 32);
 				if((val=readValue(count, param, value, "apPass")) && strlen(val))
 					strncpy((char *)staCfg.password, val, 64);
+				else
+					memset(staCfg.password, 0, sizeof(staCfg.password));
 				sdk_wifi_station_set_config(&staCfg);
 
 				sdk_wifi_station_connect();

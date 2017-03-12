@@ -56,6 +56,16 @@
 				g_fadeWD=null;
 				$('#divFade').css("visibility", "hidden");
 			}
+
+			function Init(handler, limit, action) {
+				this.m_count=limit;
+				this.m_callback=function(evt) {
+					handler(evt);
+
+					if(!--this.m_count)
+						action();
+				}.bind(this);
+			}
 			
 			function onWSMsgInit(evt) {
 				var arr=evt.data.split(",");

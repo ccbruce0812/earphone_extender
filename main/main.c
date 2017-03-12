@@ -75,7 +75,17 @@ static void msgTask(void *param) {
 		
 		switch(msgRecv.id) {
 			case MSG_KEY_PRESSED: {
-				DBG("Do something here.\n");
+#ifdef EARPHONE_END
+				DBG("Do something.\n");
+#else
+				DISCOVERY_Dev dev={
+					.name="ABCDE",
+					.freq=1070
+				};
+				
+				DBG("dev=%s, freq=%d\n", dev.name, dev.freq);
+				DISCOVERY_renew(&dev);
+#endif
 				break;
 			}
 
@@ -240,7 +250,7 @@ void user_init(void) {
 	i2c_init(SCL_PIN, SDA_PIN);
 	initFM();
 	initWiFi();
-	
+
 	g_msgQ=xQueueCreate(8, sizeof(Msg));
 	xTaskCreate(msgTask, "msgTask", 512, NULL, 4, NULL);
 }

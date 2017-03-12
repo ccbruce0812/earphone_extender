@@ -85,7 +85,7 @@ int sender(void) {
 	addrPeer.sin_port=htons(DISCOVERY_PORT);
 	addrPeer.sin_addr.s_addr=INADDR_BROADCAST;
 	
-	for(i=0;i<10;i++) {
+	for(i=0;;i++) {
 		res=sendto(fd, &packet, sizeof(packet), 0, &addrPeer, sizeof(addrPeer));
 		if(res<0) {
 			printf("Failed to invoke sendto().\n");
@@ -106,6 +106,59 @@ failed0:
 	return -1;
 }
 
+int receiver(void) {
+	int res=-1,
+		fd=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	Packet packet;
+	struct sockaddr_in addrToBind, addrPeer;
+	socklen_t addrPeerLen=sizeof(addrPeer);
+	
+	if(fd<0) {
+		printf("Failed to invoke socket().\n");
+		goto failed0;
+	}
+
+	addrToBind.sin_family=AF_INET;
+	addrToBind.sin_port=htons(DISCOVERY_PORT);
+	addrToBind.sin_addr.s_addr=INADDR_ANY;
+
+	res=bind(fd, &addrToBind, sizeof(addrToBind));
+	if(res<0) {
+		printf("Failed to invoke bind().\n");
+		goto failed1;
+	}
+
+	while(1) {
+		res=recvfrom(fd, &packet, sizeof(packet), 0, &addrPeer, &addrPeerLen);
+		if(res<0) {
+			if(errno!=EINTR)
+				printf("Failed to invoke recvfrom.\n");
+			
+			break;
+		}
+		
+		packet.opCode=ntohs(packet.opCode);
+		packet.dev.freq=ntohl(packet.dev.freq);
+		
+		printf("opcode=%d, name=%s, freq=%ld.\n", packet.opCode, packet.dev.name, packet.dev.freq);
+	}
+	
+	close(fd);
+	return 0;
+
+failed1:
+	close(fd);
+	
+failed0:
+	return -1;
+}
+
 int main(int argc, char *argv[]) {
+	if(argc<2)
+		return -1;
+	
+	if(!strcmp(argv[1], "receiver"))
+		return receiver();
+	
 	return sender();
 }

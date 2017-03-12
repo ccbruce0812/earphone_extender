@@ -13,18 +13,12 @@
 #include <lwip/pbuf.h>
 #include <lwip/udp.h>
 #include <lwip/mem.h>
-
-#include <i2c/i2c.h>
-#include <rda5807m/rda5807m.h>
-#include <kt0803l/kt0803l.h>
-#include <httpd/httpd.h>
+#include <lwip/api.h>
+#include <lwip/sockets.h>
 
 #include <string.h>
 #include <assert.h>
-#include <fcntl.h>
-#include <unistd.h>
 
-#include "../common/private_ssid_config.h"
 #include "../common/toolhelp.h"
 
 #include "discovery.h"
@@ -118,7 +112,8 @@ int DISCOVERY_initSvr(void *context, DISCOVERY_onRenew onRenew, DISCOVERY_onLeav
 
 	udp_bind(g_udpSvrCtx, IP_ADDR_ANY, DISCOVERY_PORT);
 	udp_recv(g_udpSvrCtx, onData, NULL);
-
+	
+	g_isSvrInited=true;
 	return 0;
 	
 failed:
@@ -126,6 +121,11 @@ failed:
 }
 
 int DISCOVERY_init(void *context) {
+#if 0
+	ip_addr_t addrToBind={
+		.addr=IPADDR_ANY
+	};
+	
 	if(g_isInited) {
 		DBG("This module has already been initialized.\n");
 		goto failed;
@@ -139,17 +139,47 @@ int DISCOVERY_init(void *context) {
 		goto failed;
 	}
 
-	udp_bind(g_udpCtx, IP_ADDR_ANY, DISCOVERY_PORT+1);
+//	ip_set_option(g_udpCtx, SOF_BROADCAST);
+//	IP4_ADDR(&addrToBind, 192, 168, 2, 113);
+	udp_bind(g_udpCtx, &addrToBind, DISCOVERY_PORT+1);
 
+	g_isInited=true;
 	return 0;
-	
+
 failed:
 	return -1;
+#else
+	return 0;
+#endif
+}
+
+int setAbleToBroadcast(int fd) {
+	int opt=0, res=-1;
+	socklen_t optLen=sizeof(opt);
+
+	res=getsockopt(fd, SOL_SOCKET, SO_BROADCAST, &opt, &optLen);
+	if(!res) {
+		opt=~0;
+		res=setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &opt, optLen);
+		if(res) {
+			printf("Failed to invoke setsockopt().\n");
+			return -1;
+		}
+	} else {
+		printf("Failed to invoke getsockopt().\n");
+		return -1;
+	}
+	
+	return 0;
 }
 
 int DISCOVERY_renew(const DISCOVERY_Dev *dev) {
+#if 0
 	struct pbuf *p=NULL;
 	Packet *packet=NULL;
+	ip_addr_t addrDest={
+		.addr=IPADDR_BROADCAST
+	};
 	
 	if(!dev) {
 		DBG("Bad argument. Check your code.\n");
@@ -170,7 +200,8 @@ int DISCOVERY_renew(const DISCOVERY_Dev *dev) {
 	packet->opCode=htons(OPCODE_RENEW);
 	memcpy(&packet->dev, dev, sizeof(DISCOVERY_Dev));
 	packet->dev.freq=htonl(packet->dev.freq);
-	udp_sendto(g_udpCtx, p, IP_ADDR_BROADCAST, DISCOVERY_PORT);
+//	IP4_ADDR(&addrDest, 192, 168, 2, 110);
+	udp_sendto(g_udpCtx, p, &addrDest, DISCOVERY_PORT);
 
 	pbuf_free(p);
 
@@ -178,4 +209,50 @@ int DISCOVERY_renew(const DISCOVERY_Dev *dev) {
 
 failed:
 	return -1;
+#else
+	int res=-1,
+		fd=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	Packet packet={
+		.opCode=htons(OPCODE_RENEW),
+		.dev={
+			.name="PSEUDO_SENDER",
+			.freq=htonl(96000)
+		}
+	};
+	struct sockaddr_in addrToBind, addrPeer;
+	
+	if(fd<0) {
+		printf("Failed to invoke socket().\n");
+		goto failed0;
+	}
+	
+	setAbleToBroadcast(fd);
+	
+	addrToBind.sin_family=AF_INET;
+	addrToBind.sin_port=htons(DISCOVERY_PORT+1);
+	addrToBind.sin_addr.s_addr=INADDR_ANY;
+	res=bind(fd, &addrToBind, sizeof(addrToBind));
+	if(res<0) {
+		printf("Failed to invoke bind().\n");
+		goto failed1;
+	}
+
+	addrPeer.sin_family=AF_INET;
+	addrPeer.sin_port=htons(DISCOVERY_PORT);
+	addrPeer.sin_addr.s_addr=INADDR_BROADCAST;
+	res=sendto(fd, &packet, sizeof(packet), 0, &addrPeer, sizeof(addrPeer));
+	if(res<0) {
+		printf("Failed to invoke sendto().\n");
+		goto failed0;
+	}
+	
+	close(fd);
+	return 0;
+
+failed1:
+	close(fd);
+
+failed0:
+	return -1;
+#endif
 }
