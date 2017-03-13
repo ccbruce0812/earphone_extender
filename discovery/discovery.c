@@ -23,228 +23,160 @@
 
 #include "discovery.h"
 
-#define OPCODE_MIN		(0)
-#define OPCODE_RENEW	(OPCODE_MIN+1)
-#define OPCODE_LEAVE	(OPCODE_MIN+2)
+#define DISCOVERY_PORT		(10000)
+#define ANY_IP				"0.0.0.0"
+#define GROUP_IP			"224.0.0.1"
+
+#define OPCODE_MIN			(0)
+#define OPCODE_RENEW		(OPCODE_MIN+1)
+#define OPCODE_LEAVE		(OPCODE_MIN+2)
 
 typedef struct __attribute__((packed)) {
 	unsigned short opCode;
 	DISCOVERY_Dev dev;
 } Packet;
 
-static bool g_isSvrInited=false;
-static void *g_svrContext=NULL;
+static TaskHandle_t g_task=NULL;
+static void *g_context=NULL;
 static DISCOVERY_onRenew g_onRenew=NULL;
 static DISCOVERY_onLeave g_onLeave=NULL;
-static struct udp_pcb *g_udpSvrCtx=NULL;
+static int g_fd=-1;
 
-static bool g_isInited=false;
-static void *g_context=NULL;
-static struct udp_pcb *g_udpCtx=NULL;
-
-static void onData(void *arg, struct udp_pcb *pcb, struct pbuf *p, struct ip_addr *addr, unsigned short port) {
-	Packet data;
-	unsigned int idx=0;
-	struct pbuf *now=p;
-	bool abort=false;
-
-	if(!now) {
-		DBG("No payload.\n");
-		return;
-	}
-
-	memset(&data, 0, sizeof(data));
-	while(now) {
-		if(idx+now->len>sizeof(data)) {
-			abort=true;
-			DBG("Out of buffer.\n");
-			break;
-		}
-		
-		memcpy(&((unsigned char *)&data)[idx], now->payload, now->len);
-		idx+=now->len;
-		now=now->next;
-	}
-
-	pbuf_free(p);
+static int initSocket(void) {
+	int ret=-1;
 	
-	if(abort) {
-		DBG("Aborted. Unmatched buffer size. (Expected=%d, Actual=%d)\n", sizeof(data), p->tot_len);
-		return;
+	if((ret=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))<0) {
+		DBG("Failed to invoke socket(). errno=%d\n", errno);
+		return -1;
 	}
 	
-	data.opCode=ntohs(data.opCode);
-	data.dev.freq=ntohl(data.dev.freq);
-	switch(data.opCode) {
-		case OPCODE_RENEW:
-			g_onRenew(g_svrContext, &data.dev);
-			break;
-			
-		case OPCODE_LEAVE:
-			g_onLeave(g_svrContext, &data.dev);
-			break;
-			
-		default:
-			DBG("Bad format.\n");
-	}
+	return ret;
 }
 
-int DISCOVERY_initSvr(void *context, DISCOVERY_onRenew onRenew, DISCOVERY_onLeave onLeave) {
-	if(!onRenew || !onLeave) {
-		DBG("Bad argument. Check your code.\n");
-		assert(false);
-	}
+static int bindTo(int fd, const char *str, unsigned short port) {
+	int res=-1;
+	struct sockaddr_in addr;
 	
-	if(g_isSvrInited) {
-		DBG("This module has already been initialized.\n");
-		goto failed;
-	}
-	
-	g_svrContext=context;
-	g_onRenew=onRenew;
-	g_onLeave=onLeave;
-
-	g_udpSvrCtx=udp_new();
-	if(!g_udpSvrCtx) {
-		DBG("Failed to invoke udp_new().\n");
-		goto failed;
-	}
-
-	udp_bind(g_udpSvrCtx, IP_ADDR_ANY, DISCOVERY_PORT);
-	udp_recv(g_udpSvrCtx, onData, NULL);
-	
-	g_isSvrInited=true;
-	return 0;
-	
-failed:
-	return -1;
-}
-
-int DISCOVERY_init(void *context) {
-#if 0
-	ip_addr_t addrToBind={
-		.addr=IPADDR_ANY
-	};
-	
-	if(g_isInited) {
-		DBG("This module has already been initialized.\n");
-		goto failed;
-	}
-	
-	g_context=context;
-
-	g_udpCtx=udp_new();
-	if(!g_udpCtx) {
-		DBG("Failed to invoke udp_new().\n");
-		goto failed;
-	}
-
-//	ip_set_option(g_udpCtx, SOF_BROADCAST);
-//	IP4_ADDR(&addrToBind, 192, 168, 2, 113);
-	udp_bind(g_udpCtx, &addrToBind, DISCOVERY_PORT+1);
-
-	g_isInited=true;
-	return 0;
-
-failed:
-	return -1;
-#else
-	return 0;
-#endif
-}
-
-int setAbleToBroadcast(int fd) {
-	int opt=0, res=-1;
-	socklen_t optLen=sizeof(opt);
-
-	res=getsockopt(fd, SOL_SOCKET, SO_BROADCAST, &opt, &optLen);
-	if(!res) {
-		opt=~0;
-		res=setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &opt, optLen);
-		if(res) {
-			printf("Failed to invoke setsockopt().\n");
-			return -1;
-		}
-	} else {
-		printf("Failed to invoke getsockopt().\n");
+	addr.sin_family=AF_INET;
+	addr.sin_addr.s_addr=inet_addr(str);
+	addr.sin_port=htons(port);
+	if((res=bind(fd, (struct sockaddr *)&addr, sizeof(addr)))<0) {
+		DBG("Failed to invoke bind(). res=%d, errno=%d\n", res, errno);
 		return -1;
 	}
 	
 	return 0;
 }
 
+static int joinGroup(int fd, const char *str) {
+	int res=-1;
+	ip_mreq mreq;
+	
+	mreq.imr_multiaddr.s_addr=inet_addr(str);
+	mreq.imr_interface.s_addr=INADDR_ANY;
+	if((res=setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)))<0) {
+		DBG("Failed to invoke setsockopt(). res=%d, errno=%d\n", res, errno);
+		return -1;
+	}
+	
+	return 0;
+}
+
+static void discoveryTask(void *param) {
+	int res=-1;
+	Packet packet;
+	struct sockaddr_in addr;
+	socklen_t addrLen=sizeof(addr);
+
+	while(1) {
+		if((res=recvfrom(g_fd, &packet, sizeof(packet), 0, (struct sockaddr *)&addr, &addrLen))<0) {
+			DBG("Failed to invoke recvfrom(). res=%d, errno=%d\n", res, errno);
+			continue;
+		}
+
+		packet.opCode=ntohs(packet.opCode);
+		packet.dev.freq=ntohl(packet.dev.freq);
+		switch(packet.opCode) {
+			case OPCODE_RENEW:
+				g_onRenew(g_context, &packet.dev);
+				break;
+				
+			case OPCODE_LEAVE:
+				g_onLeave(g_context, &packet.dev);
+				break;
+				
+			default:
+				DBG("Bad format.\n");
+		}
+	}
+}
+
+int DISCOVERY_init(void *context, DISCOVERY_onRenew onRenew, DISCOVERY_onLeave onLeave) {
+	if(!onRenew || !onLeave) {
+		DBG("Bad argument. Check your code.\n");
+		assert(false);
+	}
+	
+	if(g_task) {
+		DBG("This module has already been initialized.\n");
+		goto failed0;
+	}
+	
+	g_context=context;
+	g_onRenew=onRenew;
+	g_onLeave=onLeave;
+
+	if((g_fd=initSocket())<0)
+		goto failed0;
+	
+	if(bindTo(g_fd, ANY_IP, DISCOVERY_PORT+1)<0)
+		goto failed1;
+	
+	if(joinGroup(g_fd, GROUP_IP)<0)
+		goto failed1;
+	
+	if(xTaskCreate(discoveryTask, "discoveryTask", 512, NULL, 4, &g_task)!=pdPASS) {
+		DBG("Failed to create task.\n");
+		goto failed1;
+	}
+	
+	return 0;
+
+failed1:
+	close(g_fd);
+	
+failed0:
+	return -1;
+}
+
 int DISCOVERY_renew(const DISCOVERY_Dev *dev) {
-#if 0
-	struct pbuf *p=NULL;
-	Packet *packet=NULL;
-	ip_addr_t addrDest={
-		.addr=IPADDR_BROADCAST
+	int res=-1, fd=-1;
+	Packet packet={
+		.opCode=htons(OPCODE_RENEW)
 	};
+	struct sockaddr_in addr;
 	
 	if(!dev) {
 		DBG("Bad argument. Check your code.\n");
 		assert(false);
 	}
 	
-	if(!g_isInited) {
-		DBG("Invoke DISCOVERY_init() first.\n");
-		goto failed;
-	}
+	memcpy(&packet.dev, dev, sizeof(packet.dev));
 	
-	if(!(p=pbuf_alloc(PBUF_TRANSPORT, sizeof(Packet), PBUF_RAM))) {
-		DBG("Failed to invoke pbuf_alloc().\n");
-		goto failed;
-	}
-
-	packet=(Packet *)p->payload;
-	packet->opCode=htons(OPCODE_RENEW);
-	memcpy(&packet->dev, dev, sizeof(DISCOVERY_Dev));
-	packet->dev.freq=htonl(packet->dev.freq);
-//	IP4_ADDR(&addrDest, 192, 168, 2, 110);
-	udp_sendto(g_udpCtx, p, &addrDest, DISCOVERY_PORT);
-
-	pbuf_free(p);
-
-	return 0;
-
-failed:
-	return -1;
-#else
-	int res=-1,
-		fd=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	Packet packet={
-		.opCode=htons(OPCODE_RENEW),
-		.dev={
-			.name="PSEUDO_SENDER",
-			.freq=htonl(96000)
-		}
-	};
-	struct sockaddr_in addrToBind, addrPeer;
-	
-	if(fd<0) {
-		printf("Failed to invoke socket().\n");
+	if((fd=initSocket())<0)
 		goto failed0;
-	}
 	
-	setAbleToBroadcast(fd);
-	
-	addrToBind.sin_family=AF_INET;
-	addrToBind.sin_port=htons(DISCOVERY_PORT+1);
-	addrToBind.sin_addr.s_addr=INADDR_ANY;
-	res=bind(fd, &addrToBind, sizeof(addrToBind));
-	if(res<0) {
-		printf("Failed to invoke bind().\n");
+	if(bindTo(fd, ANY_IP, DISCOVERY_PORT+1)<0)
 		goto failed1;
-	}
+	
+	if(joinGroup(fd, GROUP_IP)<0)
+		goto failed1;
 
-	addrPeer.sin_family=AF_INET;
-	addrPeer.sin_port=htons(DISCOVERY_PORT);
-	addrPeer.sin_addr.s_addr=INADDR_BROADCAST;
-	res=sendto(fd, &packet, sizeof(packet), 0, &addrPeer, sizeof(addrPeer));
-	if(res<0) {
-		printf("Failed to invoke sendto().\n");
-		goto failed0;
-	}
+	addr.sin_family=AF_INET;
+	addr.sin_port=htons(DISCOVERY_PORT);
+	addr.sin_addr.s_addr=inet_addr(GROUP_IP);
+	if((res=sendto(fd, &packet, sizeof(packet), 0, (struct sockaddr *)&addr, sizeof(addr)))<0)
+		DBG("Failed to invoke sendto(). res=%d, errno=%d\n", res, errno);
 	
 	close(fd);
 	return 0;
@@ -254,5 +186,4 @@ failed1:
 
 failed0:
 	return -1;
-#endif
 }

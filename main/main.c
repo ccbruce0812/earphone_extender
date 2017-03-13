@@ -50,6 +50,8 @@ void onRenew(void *context, const DISCOVERY_Dev *dev) {
 		DBG("Failed to invoke xQueueSend(). Queue is full.\n");
 		free(msg.param);
 	}
+	
+	DBG("Message received.\n");
 }
 
 void onLeave(void *context, const DISCOVERY_Dev *dev) {
@@ -63,9 +65,7 @@ static void msgTask(void *param) {
 	CMDSVR_init();
 
 #ifdef EARPHONE_END
-	DISCOVERY_initSvr(&g_msgQ, onRenew, onLeave);
-#else
-	DISCOVERY_init(&g_msgQ);
+	DISCOVERY_init(&g_msgQ, onRenew, onLeave);
 #endif
 
 	gpio_write(LED_PIN, true);
@@ -75,17 +75,13 @@ static void msgTask(void *param) {
 		
 		switch(msgRecv.id) {
 			case MSG_KEY_PRESSED: {
-#ifdef EARPHONE_END
-				DBG("Do something.\n");
-#else
 				DISCOVERY_Dev dev={
-					.name="ABCDE",
+					.name="PSEUDO_DEVICE_00",
 					.freq=1070
 				};
 				
 				DBG("dev=%s, freq=%d\n", dev.name, dev.freq);
 				DISCOVERY_renew(&dev);
-#endif
 				break;
 			}
 
