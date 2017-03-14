@@ -59,25 +59,29 @@ char *onCGI(int idx, int count, char *param[], char *value[]) {
 				InitParam init;
 				struct sdk_softap_config apCfg;
 				struct sdk_station_config staCfg;
+				int fout=-1;
 				
+				memset(&init, 0, sizeof(init));
 				memset(&apCfg, 0, sizeof(apCfg));
 				sdk_wifi_softap_get_config(&apCfg);
-				if((val=readValue(count, param, value, "lcSSID")) && strlen(val))
+				if((val=readValue(count, param, value, "lcSSID")) && strlen(val) && strcmp(val, (const char *)apCfg.ssid)) {
+					init.fieldMask|=0x1;
 					strncpy((char *)init.locSSID, val, 32);
-				if((val=readValue(count, param, value, "lcPass")) && strlen(val))
-					strncpy((char *)apCfg.password, val, 64);
-				else
-					memset(apCfg.password, 0, sizeof(apCfg.password));
+				}
+				if((val=readValue(count, param, value, "lcPass")) && strlen(val)) {
+					init.fieldMask|=0x2;
+					strncpy((char *)init.locPassword, val, 64);
+					init.locAuthMode=AUTH_WPA2_PSK;
+				}
 				sdk_wifi_softap_set_config(&apCfg);
-				
-				if(strcmp((char *)init.locSSID, (char *)apCfg.ssid)) {
-					int fout=open("initParam", O_WRONLY|O_CREAT, 0);
-					
-					if(fout>=0) {
-						write(fout, &init, sizeof(init));
-						DBG("New local SSID is '%s'.\n", init.locSSID);
-						close(fout);
-					}
+
+				if((fout=open("initParam", O_WRONLY|O_CREAT, 0))>=0) {
+					if(init.fieldMask&0x1)
+						DBG("New local SSID=%s.\n", init.locSSID);
+					if(init.fieldMask&0x2)
+						DBG("New local password=%s.\n", init.locPassword);
+					write(fout, &init, sizeof(init));
+					close(fout);
 				}
 
 				memset(&staCfg, 0, sizeof(staCfg));

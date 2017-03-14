@@ -17,7 +17,10 @@ extern "C" {
 #define MSEC2TICKS(n) (n/portTICK_PERIOD_MS)
 
 typedef struct {
+	unsigned long fieldMask;
 	unsigned char locSSID[32];
+	unsigned char locPassword[64];
+	AUTH_MODE locAuthMode;
 } InitParam;
 
 #ifndef EARPHONE_EXTENDER_NDEBUG

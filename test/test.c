@@ -17,11 +17,14 @@
 #include <assert.h>
 
 #define DISCOVERY_PORT		(10000)
+
+#define ANY_IP				"0.0.0.0"
+#define BCAST_IP			"255.255.255.255"
+#define MCAST_IP			"224.0.0.1"
+
 #define OPCODE_MIN			(0)
 #define OPCODE_RENEW		(OPCODE_MIN+1)
 #define OPCODE_LEAVE		(OPCODE_MIN+2)
-#define ANY_IP				"0.0.0.0"
-#define GROUP_IP			"224.0.0.1"
 
 typedef struct __attribute__((packed)) {
 	char name[32];
@@ -32,28 +35,6 @@ typedef struct __attribute__((packed)) {
 	unsigned short opCode;
 	DISCOVERY_Dev dev;
 } Packet;
-
-/*
-int setAbleToBroadcast(int fd) {
-	int opt=0, res=-1;
-	socklen_t optLen=sizeof(opt);
-
-	res=getsockopt(fd, SOL_SOCKET, SO_BROADCAST, &opt, &optLen);
-	if(!res) {
-		opt=~0;
-		res=setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &opt, optLen);
-		if(res) {
-			printf("Failed to invoke setsockopt().\n");
-			return -1;
-		}
-	} else {
-		printf("Failed to invoke getsockopt().\n");
-		return -1;
-	}
-	
-	return 0;
-}
-*/
 
 int initSocket(void) {
 	int ret=-1;
@@ -78,6 +59,17 @@ int bindTo(int fd, const char *str, unsigned short port) {
 		return -1;
 	}
 	
+	return 0;
+}
+
+int setBroadcast(int fd) {
+	int opt=~0, res=-1;
+	
+	if((res=setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(opt)))) {
+		printf("Failed to invoke setsockopt(). res=%d, errno=%d\n", res, errno);
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -108,17 +100,28 @@ int sender(void) {
 	
 	if((fd=initSocket())<0)
 		goto failed0;
+
+#ifdef BCAST
+	if(setBroadcast(fd)<0)
+		goto failed1;
+#endif
 	
 	if(bindTo(fd, ANY_IP, DISCOVERY_PORT+1)<0)
 		goto failed1;
-	
-	if(joinGroup(fd, GROUP_IP)<0)
+
+#ifdef MCAST
+	if(joinGroup(fd, MCAST_IP)<0)
 		goto failed1;
+#endif
 
 	for(i=0;;i++) {
 		addr.sin_family=AF_INET;
 		addr.sin_port=htons(DISCOVERY_PORT);
-		addr.sin_addr.s_addr=inet_addr(GROUP_IP);
+#ifdef MCAST
+		addr.sin_addr.s_addr=inet_addr(MCAST_IP);
+#else
+		addr.sin_addr.s_addr=inet_addr(BCAST_IP);
+#endif
 		if((res=sendto(fd, &packet, sizeof(packet), 0, &addr, sizeof(addr)))<0) {
 			printf("Failed to invoke sendto(). res=%d, errno=%d\n", res, errno);
 			break;
@@ -149,9 +152,11 @@ int receiver(void) {
 	
 	if(bindTo(fd, ANY_IP, DISCOVERY_PORT)<0)
 		goto failed1;
-	
-	if(joinGroup(fd, GROUP_IP)<0)
+
+#ifdef MCAST
+	if(joinGroup(fd, MCAST_IP)<0)
 		goto failed1;
+#endif
 
 	while(1) {
 		if((res=recvfrom(fd, &packet, sizeof(packet), 0, &addr, &addrLen))<0) {

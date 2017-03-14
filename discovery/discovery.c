@@ -24,8 +24,10 @@
 #include "discovery.h"
 
 #define DISCOVERY_PORT		(10000)
+
 #define ANY_IP				"0.0.0.0"
-#define GROUP_IP			"224.0.0.1"
+#define BCAST_IP			"255.255.255.255"
+#define MCAST_IP			"224.0.0.1"
 
 #define OPCODE_MIN			(0)
 #define OPCODE_RENEW		(OPCODE_MIN+1)
@@ -62,6 +64,17 @@ static int bindTo(int fd, const char *str, unsigned short port) {
 	addr.sin_port=htons(port);
 	if((res=bind(fd, (struct sockaddr *)&addr, sizeof(addr)))<0) {
 		DBG("Failed to invoke bind(). res=%d, errno=%d\n", res, errno);
+		return -1;
+	}
+	
+	return 0;
+}
+
+static int setBroadcast(int fd) {
+	int opt=~0, res=-1;
+
+	if((res=setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(opt)))<0) {
+		DBG("Failed to invoke setsockopt(). res=%d, errno=%d\n", res, errno);
 		return -1;
 	}
 	
@@ -111,7 +124,7 @@ static void discoveryTask(void *param) {
 	}
 }
 
-int DISCOVERY_init(void *context, DISCOVERY_onRenew onRenew, DISCOVERY_onLeave onLeave) {
+int DISCOVERY_init(void *context, DISCOVERY_onRenew onRenew, DISCOVERY_onLeave onLeave, bool multicast) {
 	if(!onRenew || !onLeave) {
 		DBG("Bad argument. Check your code.\n");
 		assert(false);
@@ -129,11 +142,13 @@ int DISCOVERY_init(void *context, DISCOVERY_onRenew onRenew, DISCOVERY_onLeave o
 	if((g_fd=initSocket())<0)
 		goto failed0;
 	
-	if(bindTo(g_fd, ANY_IP, DISCOVERY_PORT+1)<0)
+	if(bindTo(g_fd, ANY_IP, DISCOVERY_PORT)<0)
 		goto failed1;
-	
-	if(joinGroup(g_fd, GROUP_IP)<0)
-		goto failed1;
+
+	if(multicast) {
+		if(joinGroup(g_fd, MCAST_IP)<0)
+			goto failed1;
+	}
 	
 	if(xTaskCreate(discoveryTask, "discoveryTask", 512, NULL, 4, &g_task)!=pdPASS) {
 		DBG("Failed to create task.\n");
@@ -149,32 +164,44 @@ failed0:
 	return -1;
 }
 
-int DISCOVERY_renew(const DISCOVERY_Dev *dev) {
+int DISCOVERY_renew(const DISCOVERY_Dev *dev, unsigned char mode, const char *tarAddr) {
 	int res=-1, fd=-1;
 	Packet packet={
 		.opCode=htons(OPCODE_RENEW)
 	};
 	struct sockaddr_in addr;
 	
-	if(!dev) {
+	if(!dev || (mode==DISCOVERY_RENEW_MODE_UNICAST && !tarAddr)) {
 		DBG("Bad argument. Check your code.\n");
 		assert(false);
 	}
 	
 	memcpy(&packet.dev, dev, sizeof(packet.dev));
+	packet.dev.freq=htonl(packet.dev.freq);
 	
 	if((fd=initSocket())<0)
 		goto failed0;
+
+	if(mode==DISCOVERY_RENEW_MODE_BROADCAST) {
+		if(setBroadcast(fd)<0)
+			goto failed1;
+	}
 	
 	if(bindTo(fd, ANY_IP, DISCOVERY_PORT+1)<0)
 		goto failed1;
 	
-	if(joinGroup(fd, GROUP_IP)<0)
-		goto failed1;
+	if(mode==DISCOVERY_RENEW_MODE_MULTICAST) {
+		if(joinGroup(fd, MCAST_IP)<0)
+			goto failed1;
+		tarAddr=MCAST_IP;
+	} else if(mode==DISCOVERY_RENEW_MODE_BROADCAST)
+		tarAddr=BCAST_IP;
+	else
+		;
 
 	addr.sin_family=AF_INET;
-	addr.sin_port=htons(DISCOVERY_PORT);
-	addr.sin_addr.s_addr=inet_addr(GROUP_IP);
+	addr.sin_port=htons(DISCOVERY_PORT);		
+	addr.sin_addr.s_addr=inet_addr(tarAddr);
 	if((res=sendto(fd, &packet, sizeof(packet), 0, (struct sockaddr *)&addr, sizeof(addr)))<0)
 		DBG("Failed to invoke sendto(). res=%d, errno=%d\n", res, errno);
 	

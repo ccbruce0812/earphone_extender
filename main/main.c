@@ -14,6 +14,10 @@
 #include <dhcpserver.h>
 #include <esp_spiffs.h>
 
+#include <lwip/netif.h>
+#include <ipv4/lwip/inet.h>
+#include <ipv4/lwip/igmp.h>
+
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
@@ -29,12 +33,11 @@
 #include "../cmdsvr/cmdsvr.h"
 #include "../discovery/discovery.h"
 
-//ETSTimer g_timer={0};
 QueueHandle_t g_msgQ=NULL;
 unsigned char g_curStat=STAT_IDLE;
 
 #ifdef EARPHONE_END
-void onRenew(void *context, const DISCOVERY_Dev *dev) {
+static void onRenew(void *context, const DISCOVERY_Dev *dev) {
 	Msg msg={
 		.id=MSG_STATAB_RENEW,
 		.param=NULL
@@ -54,18 +57,27 @@ void onRenew(void *context, const DISCOVERY_Dev *dev) {
 	DBG("Message received.\n");
 }
 
-void onLeave(void *context, const DISCOVERY_Dev *dev) {
+static void onLeave(void *context, const DISCOVERY_Dev *dev) {
 	DBG("No action yet.\n");
 }
 #endif
 
 static void msgTask(void *param) {
+	struct netif *nif=NULL;
 	Msg msgRecv={0};
 	
+	if((nif=sdk_system_get_netif(0))) {
+		nif->flags|=NETIF_FLAG_IGMP|NETIF_FLAG_BROADCAST;
+		igmp_init();
+		igmp_start(nif);
+		DBG("IGMP/BROADCAST prepared.\n");
+	} else
+		DBG("Failed to get net interface.\n");
+
 	CMDSVR_init();
 
 #ifdef EARPHONE_END
-	DISCOVERY_init(&g_msgQ, onRenew, onLeave);
+	DISCOVERY_init(&g_msgQ, onRenew, onLeave, false);
 #endif
 
 	gpio_write(LED_PIN, true);
@@ -77,11 +89,19 @@ static void msgTask(void *param) {
 			case MSG_KEY_PRESSED: {
 				DISCOVERY_Dev dev={
 					.name="PSEUDO_DEVICE_00",
-					.freq=1070
-				};
+					.freq=107000
+				};		
+				struct sdk_softap_config apCfg;
+				unsigned short freq=0;
+
+				memset(&apCfg, 0, sizeof(apCfg));
+				sdk_wifi_softap_get_config(&apCfg);
 				
-				DBG("dev=%s, freq=%d\n", dev.name, dev.freq);
-				DISCOVERY_renew(&dev);
+				strcpy(dev.name, (const char *)apCfg.ssid);
+				KT0803L_getFreq(&freq);
+				dev.freq=((unsigned long)freq)*100;
+				
+				DISCOVERY_renew(&dev, DISCOVERY_RENEW_MODE_UNICAST, "192.168.2.112");
 				break;
 			}
 
@@ -201,29 +221,33 @@ static void initWiFi(void) {
 	int fin=open("initParam", O_RDONLY);
 	struct sdk_softap_config apCfg;
 	struct ip_info ipAddr;
-	
+
+	sdk_wifi_set_phy_mode(PHY_MODE_11N);
     sdk_wifi_set_opmode(STATIONAP_MODE);
 
 	memset(&apCfg, 0, sizeof(apCfg));
 	sdk_wifi_softap_get_config(&apCfg);
 	if(fin>=0) {
-		InitParam data;
+		InitParam init;
 		
-		if(read(fin, &data, sizeof(data))==sizeof(data)) {
-			memcpy(apCfg.ssid, data.locSSID, sizeof(data.locSSID));
-			DBG("New local SSID is '%s'.\n", apCfg.ssid);
+		if(read(fin, &init, sizeof(init))==sizeof(init)) {
+			if(init.fieldMask&0x1) {
+				memcpy(apCfg.ssid, init.locSSID, sizeof(init.locSSID));
+				DBG("New local SSID=%s.\n", apCfg.ssid);
+			}
+			if(init.fieldMask&0x2) {
+				memcpy(apCfg.password, init.locPassword, sizeof(init.locPassword));
+				apCfg.authmode=init.locAuthMode;
+				DBG("New local password=%s.\n", apCfg.password);
+			}
+			apCfg.max_connection=8;
 		}
 		
 		close(fin);
 		unlink("initParam");
-	} else {
-		if(!apCfg.ssid[0]) {
-			srand(xTaskGetTickCount());
-			sprintf((char *)apCfg.ssid, "%s_%04d", DEFAULT_LOCAL_SSID_PREFIX, rand()%10000);
-			strcpy((char *)apCfg.password, DEFAULT_LOCAL_PASS);
-		}
-	}
-	sdk_wifi_softap_set_config(&apCfg);
+		sdk_wifi_softap_set_config(&apCfg);
+	} else
+		DBG("No initParam.\n");
 
 	memset(&ipAddr, 0, sizeof(ipAddr));
 	IP4_ADDR(&ipAddr.ip, 192, 168, 254, 254);
