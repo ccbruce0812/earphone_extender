@@ -181,6 +181,10 @@ failed0:
 }
 
 int main(int argc, char *argv[]) {
+	#ifdef __i386__
+		printf("i386\n");
+	#endif
+
 	if(argc<2)
 		return -1;
 	

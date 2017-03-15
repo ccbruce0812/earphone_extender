@@ -17,14 +17,16 @@
 #include <lwip/netif.h>
 #include <ipv4/lwip/inet.h>
 #include <ipv4/lwip/igmp.h>
+#include <lwip/sockets.h>
 
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
 #include <assert.h>
 #include <stdio.h>
-#include <fcntl.h>
 #include <unistd.h>
+#undef O_NONBLOCK
+#include <fcntl.h>
 
 #include "../common/private_ssid_config.h"
 #include "../common/toolhelp.h"
@@ -54,11 +56,40 @@ static void onRenew(void *context, const DISCOVERY_Dev *dev) {
 		free(msg.param);
 	}
 	
-	DBG("Message received.\n");
+	DBG("Renew.\n");
 }
 
 static void onLeave(void *context, const DISCOVERY_Dev *dev) {
-	DBG("No action yet.\n");
+	DBG("No action.\n");
+}
+
+static void onRelay(void *context, const struct sockaddr_in *addr) {
+	DBG("No action.\n");
+}
+#else
+static void onRenew(void *context, const DISCOVERY_Dev *dev) {
+	DBG("No action.\n");
+}
+
+static void onLeave(void *context, const DISCOVERY_Dev *dev) {
+	DBG("No action.\n");
+}
+
+static void onRelay(void *context, const struct sockaddr_in *addr) {
+	DISCOVERY_Dev dev;		
+	struct sdk_softap_config apCfg;
+	unsigned short freq=0;
+
+	memset(&apCfg, 0, sizeof(apCfg));
+	sdk_wifi_softap_get_config(&apCfg);
+	
+	strcpy(dev.name, (const char *)apCfg.ssid);
+	KT0803L_getFreq(&freq);
+	dev.freq=((unsigned long)freq)*100;
+	
+	DISCOVERY_renew(&dev, inet_ntoa(addr->sin_addr));
+	
+	DBG("Relay.\n");
 }
 #endif
 
@@ -73,37 +104,17 @@ static void msgTask(void *param) {
 		DBG("IGMP/BROADCAST prepared.\n");
 	} else
 		DBG("Failed to get net interface.\n");
-
+	
+	DISCOVERY_init(&g_msgQ, onRenew, onLeave, onRelay, false);
 	CMDSVR_init();
-
-#ifdef EARPHONE_END
-	DISCOVERY_init(&g_msgQ, onRenew, onLeave, false);
-#endif
-
 	gpio_write(LED_PIN, true);
 	
 	while(1) {
 		xQueueReceive(g_msgQ, &msgRecv, portMAX_DELAY);
 		
 		switch(msgRecv.id) {
-			case MSG_KEY_PRESSED: {
-				DISCOVERY_Dev dev={
-					.name="PSEUDO_DEVICE_00",
-					.freq=107000
-				};		
-				struct sdk_softap_config apCfg;
-				unsigned short freq=0;
-
-				memset(&apCfg, 0, sizeof(apCfg));
-				sdk_wifi_softap_get_config(&apCfg);
-				
-				strcpy(dev.name, (const char *)apCfg.ssid);
-				KT0803L_getFreq(&freq);
-				dev.freq=((unsigned long)freq)*100;
-				
-				DISCOVERY_renew(&dev, DISCOVERY_RENEW_MODE_UNICAST, "192.168.2.112");
+			case MSG_KEY_PRESSED:
 				break;
-			}
 
 #ifdef EARPHONE_END
 			case MSG_STATAB_RENEW: {
