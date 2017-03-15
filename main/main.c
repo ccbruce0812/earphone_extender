@@ -38,6 +38,8 @@
 QueueHandle_t g_msgQ=NULL;
 unsigned char g_curStat=STAT_IDLE;
 
+static void initFM(void);
+
 #ifdef EARPHONE_END
 static void onRenew(void *context, const DISCOVERY_Dev *dev) {
 	Msg msg={
@@ -55,24 +57,18 @@ static void onRenew(void *context, const DISCOVERY_Dev *dev) {
 		DBG("Failed to invoke xQueueSend(). Queue is full.\n");
 		free(msg.param);
 	}
-	
-	DBG("Renew.\n");
 }
 
 static void onLeave(void *context, const DISCOVERY_Dev *dev) {
-	DBG("No action.\n");
 }
 
 static void onRelay(void *context, const struct sockaddr_in *addr) {
-	DBG("No action.\n");
 }
 #else
 static void onRenew(void *context, const DISCOVERY_Dev *dev) {
-	DBG("No action.\n");
 }
 
 static void onLeave(void *context, const DISCOVERY_Dev *dev) {
-	DBG("No action.\n");
 }
 
 static void onRelay(void *context, const struct sockaddr_in *addr) {
@@ -88,8 +84,6 @@ static void onRelay(void *context, const struct sockaddr_in *addr) {
 	dev.freq=((unsigned long)freq)*100;
 	
 	DISCOVERY_renew(&dev, inet_ntoa(addr->sin_addr));
-	
-	DBG("Relay.\n");
 }
 #endif
 
@@ -113,8 +107,12 @@ static void msgTask(void *param) {
 		xQueueReceive(g_msgQ, &msgRecv, portMAX_DELAY);
 		
 		switch(msgRecv.id) {
-			case MSG_KEY_PRESSED:
+			case MSG_KEY_PRESSED: {
+#ifdef EARPHONE_END
+				initFM();
+#endif
 				break;
+			}
 
 #ifdef EARPHONE_END
 			case MSG_STATAB_RENEW: {
@@ -201,7 +199,7 @@ static void initFM(void) {
 	RDA5807M_init(&setting);
 	RDA5807M_setFreq(96000);
 	RDA5807M_enableOutput(RDA5807M_TRUE);
-	RDA5807M_setVolume(1);
+	RDA5807M_setVolume(5);
 	RDA5807M_unmute(RDA5807M_TRUE);
 #else
 	KT0803L_SETTING setting={

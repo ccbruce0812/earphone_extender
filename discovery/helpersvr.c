@@ -16,12 +16,43 @@
 #include <signal.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <ifaddrs.h>
 
 #define HELPERSVR
 #include "discovery.h"
 #include "common.h"
 
-int server(bool multicast) {
+static bool isLocalAddr(const struct sockaddr_in *addr) {
+	int res=-1;
+	struct ifaddrs *head=NULL, *now=NULL;
+
+	if(!addr) {
+		DBG("Bad argument. Check your code.\n");
+		assert(false);
+	}
+	
+	if((res=getifaddrs(&head))<0) {
+		DBG("Failed to invoek getifaddrs(). res=%d, errno=%d\n", res, errno);
+		return false;
+	}
+
+	now=head;
+	while(now) {
+		if(((struct sockaddr_in *)now->ifa_addr)->sin_addr.s_addr==addr->sin_addr.s_addr)
+			goto ok;
+		
+		now=now->ifa_next;
+	}
+	
+	freeifaddrs(head);
+	return false;
+	
+ok:
+	freeifaddrs(head);
+	return true;
+}
+
+static int server(bool multicast) {
 	int res=-1, fd=-1;
 	struct sockaddr_in addr;
 	socklen_t addrLen=sizeof(addr);
@@ -47,7 +78,7 @@ int server(bool multicast) {
 	prev=cur=now();
 	while(1) {
 		if((res=recvfrom(fd, &packet, sizeof(packet), MSG_DONTWAIT, &addr, &addrLen))>=0) {
-			if(ntohs(packet.opCode)==OPCODE_RENEW)
+			if(ntohs(packet.opCode)==OPCODE_RENEW && !isLocalAddr(&addr))
 				sendTo(fd, &packet, multicast?MCAST_IP:BCAST_IP);
 		} else {
 			if(errno==EINTR) {

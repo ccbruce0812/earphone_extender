@@ -60,7 +60,7 @@ static void discoveryTask(void *param) {
 				break;
 			
 			default:
-				DBG("Bad format.\n");
+				DBG("Bad format. OPCODE=%d\n", packet.opCode);
 		}
 	}
 }
