@@ -7,6 +7,7 @@
 
 #include <etstimer.h>
 #include <espressif/esp_common.h>
+#include <espressif/esp_system.h>
 
 #include <lwip/inet.h>
 
@@ -98,6 +99,11 @@ char *onCGI(int idx, int count, char *param[], char *value[]) {
 				
 				ret="/check.html";
 				goto end;
+			}
+			
+			case 2: {
+				sdk_system_deep_sleep(0);
+				break;
 			}
 			
 			default:

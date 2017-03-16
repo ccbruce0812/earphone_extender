@@ -6,66 +6,14 @@
 		<link rel="shortcut icon" href="img/favicon.png">
 		<title>HTTP Server</title>
 		<link rel="stylesheet" type="text/css" href="style/style.css">
-		<style>
-			.fade {
-				opacity:    0.5;
-				background: black;
-				width:      100%;
-				height:     100%;
-				z-index:    10;
-				top:        0;
-				left:       0;
-				position:   fixed;
-			}
-		</style>
 		<!--<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>-->
 		<script src="script/jquery_3.1.1.min.js"></script>
+		<script src="script/common.js"></script>
 		<script language="javascript">
 			const MSG_SET_CHANNEL			="MSG_SET_CHANNEL";
 			const MSG_GET_CHANNEL			="MSG_GET_CHANNEL";
 			
 			var g_webSocket=null;
-			var g_fadeWD=null;
-
-			function getParam(qstr, field) {
-				var regex=new RegExp("[?&]"+field.replace(/[\[\]]/g, "\\$&")+"(=([^&#]*)|&|#|$)"),
-					res=regex.exec(qstr);
-
-				if(!res)
-					return null;
-
-				if(!res[2])
-					return '';
-
-				return decodeURIComponent(res[2].replace(/\+/g, " "));
-			}
-			
-			function fade(timeout) {
-				if(g_fadeWD)
-					return;
-			
-				$('#divFade').css("visibility", "visible");
-				g_fadeWD=setTimeout(function(){
-					location.reload();
-					console.log("Fade watchdog is triggered.");
-				}, timeout);
-			}
-			
-			function noFade() {
-				clearTimeout(g_fadeWD);
-				g_fadeWD=null;
-				$('#divFade').css("visibility", "hidden");
-			}
-
-			function Init(handler, limit, action) {
-				this.m_count=limit;
-				this.m_callback=function(evt) {
-					handler(evt);
-
-					if(!--this.m_count)
-						action();
-				}.bind(this);
-			}
 			
 			function onWSMsgInit(evt) {
 				var arr=evt.data.split(",");
@@ -178,6 +126,5 @@
                 </div>
 			</div>
 		</div>
-		<div id="divFade" class="fade" style="visibility: visible"></div>
 	</body>
 </html>
