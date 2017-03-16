@@ -39,6 +39,7 @@ QueueHandle_t g_msgQ=NULL;
 unsigned char g_curStat=STAT_IDLE;
 
 static void initFM(void);
+static void tuneFM(unsigned long freq);
 
 #ifdef EARPHONE_END
 static void onRenew(void *context, const DISCOVERY_Dev *dev) {
@@ -108,9 +109,8 @@ static void msgTask(void *param) {
 		
 		switch(msgRecv.id) {
 			case MSG_KEY_PRESSED: {
-#ifdef EARPHONE_END
 				initFM();
-#endif
+				tuneFM(96000);
 				break;
 			}
 
@@ -178,6 +178,26 @@ static void initGPIO(void) {
 	gpio_write(LED_PIN, false);
 }
 
+static void tuneFM(unsigned long freq) {
+	RDA5807M_BOOL isStereo=RDA5807M_FALSE;
+	int i=0;
+	
+	//RDA5807M_enableOutput(RDA5807M_FALSE);
+	for(i=0;i<3;i++) {
+		RDA5807M_setFreq(freq);
+		vTaskDelay(MSEC2TICKS(500));
+		RDA5807M_isStereo(&isStereo);
+		
+		if(isStereo==RDA5807M_TRUE) {
+			//RDA5807M_enableOutput(RDA5807M_TRUE);
+			DBG("OK\n");
+			return;
+		}
+		vTaskDelay(MSEC2TICKS(500));
+	}
+	DBG("Failed\n");
+}
+
 static void initFM(void) {
 #ifdef EARPHONE_END
 	RDA5807M_SETTING setting={
@@ -197,8 +217,10 @@ static void initFM(void) {
 	};
 	
 	RDA5807M_init(&setting);
-	RDA5807M_setFreq(96000);
 	RDA5807M_enableOutput(RDA5807M_TRUE);
+	RDA5807M_setAFCDisable(RDA5807M_FALSE);
+	RDA5807M_setSeekSNRThrshold(0x2);
+	RDA5807M_setFreq(96000);
 	RDA5807M_setVolume(5);
 	RDA5807M_unmute(RDA5807M_TRUE);
 #else
