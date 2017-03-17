@@ -109,7 +109,6 @@ static void msgTask(void *param) {
 		
 		switch(msgRecv.id) {
 			case MSG_KEY_PRESSED: {
-				initFM();
 				tuneFM(96000);
 				break;
 			}
@@ -179,23 +178,43 @@ static void initGPIO(void) {
 }
 
 static void tuneFM(unsigned long freq) {
-	RDA5807M_BOOL isStereo=RDA5807M_FALSE;
-	int i=0;
+	RDA5807M_BOOL isStation=RDA5807M_FALSE,
+					isStereo=RDA5807M_FALSE;
+	unsigned char rssi=0;
 	
-	//RDA5807M_enableOutput(RDA5807M_FALSE);
-	for(i=0;i<3;i++) {
-		RDA5807M_setFreq(freq);
-		vTaskDelay(MSEC2TICKS(500));
-		RDA5807M_isStereo(&isStereo);
-		
-		if(isStereo==RDA5807M_TRUE) {
-			//RDA5807M_enableOutput(RDA5807M_TRUE);
-			DBG("OK\n");
-			return;
+	if(freq) {
+		if(RDA5807M_enableOutput(RDA5807M_TRUE)<0) {
+			DBG("Failed to invoke RDA5807M_enableOutput().\n");
+			goto failed;
 		}
-		vTaskDelay(MSEC2TICKS(500));
+		
+		if(RDA5807M_setFreq(freq)<0) {
+			DBG("Failed to invoke RDA5807M_setFreq().\n");
+			goto failed;
+		}
+		
+		if(RDA5807M_isStation(&isStation)<0) {
+			DBG("Failed to invoke RDA5807M_isStation().\n");
+			goto failed;
+		}
+		
+		if(RDA5807M_isStereo(&isStereo)<0) {
+			DBG("Failed to invoke RDA5807M_isStereo().\n");
+			goto failed;
+		}
+		
+		if(RDA5807M_getRSSI(&rssi)<0) {
+			DBG("Failed to invoke RDA5807M_getRSSI().\n");
+			goto failed;
+		}
+		
+		DBG("freq=%d, isStation=%d, isStereo=%d, rssi=%d\n", freq, isStation, isStereo, rssi);
+		
+		return;
 	}
-	DBG("Failed\n");
+
+failed:
+	RDA5807M_enableOutput(RDA5807M_FALSE);
 }
 
 static void initFM(void) {
@@ -216,13 +235,14 @@ static void initFM(void) {
 		}
 	};
 	
-	RDA5807M_init(&setting);
-	RDA5807M_enableOutput(RDA5807M_TRUE);
+	if(RDA5807M_init(&setting)<0)
+		DBG("Failed to invoke RDA5807M_init().\n");
 	RDA5807M_setAFCDisable(RDA5807M_FALSE);
 	RDA5807M_setSeekSNRThrshold(0x2);
 	RDA5807M_setFreq(96000);
 	RDA5807M_setVolume(5);
 	RDA5807M_unmute(RDA5807M_TRUE);
+	RDA5807M_enableOutput(RDA5807M_FALSE);
 #else
 	KT0803L_SETTING setting={
 		.useExtInductor=KT0803L_FALSE,
