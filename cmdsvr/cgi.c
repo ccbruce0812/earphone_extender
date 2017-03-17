@@ -26,11 +26,17 @@
 
 #include "cgi.h"
 
-char *onCGI(int idx, int count, char *param[], char *value[]);
+static char *onCGI(int idx, int count, char *param[], char *value[]);
 
 const tCGI g_cgiTab[]={
 	{"/cmdSvr.cgi", (tCGIHandler)onCGI}
 };
+
+ETSTimer g_timer={0};
+
+static void onDeepSleep(void *param) {
+	sdk_system_deep_sleep(0);
+}
 
 static const char *readValue(int count, char *param[], char *value[], const char *key) {
 	int i=0;
@@ -43,7 +49,7 @@ static const char *readValue(int count, char *param[], char *value[], const char
 	return NULL;
 }
 
-char *onCGI(int idx, int count, char *param[], char *value[]) {
+static char *onCGI(int idx, int count, char *param[], char *value[]) {
 	const char *val=NULL;
 	char *ret="/aborted.html";
 	
@@ -102,7 +108,10 @@ char *onCGI(int idx, int count, char *param[], char *value[]) {
 			}
 			
 			case 2: {
-				sdk_system_deep_sleep(0);
+				sdk_ets_timer_setfn(&g_timer, onDeepSleep, NULL);
+				sdk_ets_timer_arm(&g_timer, 5000, false);
+
+				ret="/shutdown.html";
 				break;
 			}
 			
