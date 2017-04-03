@@ -237,12 +237,11 @@ static void initFM(void) {
 	
 	if(RDA5807M_init(&setting)<0)
 		DBG("Failed to invoke RDA5807M_init().\n");
-	RDA5807M_setAFCDisable(RDA5807M_FALSE);
-	RDA5807M_setSeekSNRThrshold(0x2);
-	RDA5807M_setFreq(96000);
-	RDA5807M_setVolume(5);
-	RDA5807M_unmute(RDA5807M_TRUE);
 	RDA5807M_enableOutput(RDA5807M_TRUE);
+	RDA5807M_setAFCDisable(RDA5807M_FALSE);
+	RDA5807M_setFreq(96000);
+	RDA5807M_setVolume(7);
+	RDA5807M_unmute(RDA5807M_TRUE);
 #else
 	KT0803L_SETTING setting={
 		.useExtInductor=KT0803L_FALSE,

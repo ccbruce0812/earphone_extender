@@ -62,13 +62,29 @@ void onWSMsg(struct tcp_pcb *pcb, unsigned char *data, unsigned short len, unsig
 
 				if(strlen(arg[0])) {
 					if(!strcmp(arg[0], "none")) {
-						RDA5807M_enableOutput(RDA5807M_FALSE);
 						strcpy(g_curSta, "none");
 						err=-2;
 					} else {
 						if(getStaFreq(arg[0], &val)>=0) {
-							if(RDA5807M_enableOutput(RDA5807M_TRUE)>=0 &&
-								RDA5807M_setFreq(val)>=0) {
+							if(RDA5807M_setFreq(val)>=0) {
+								RDA5807M_BOOL isStation=RDA5807M_FALSE,
+												isStereo=RDA5807M_FALSE;
+								unsigned char rssi=0;
+								
+								if(RDA5807M_setFreq(val)<0)
+									DBG("Failed to invoke RDA5807M_setFreq().\n");
+								
+								if(RDA5807M_isStation(&isStation)<0)
+									DBG("Failed to invoke RDA5807M_isStation().\n");
+								
+								if(RDA5807M_isStereo(&isStereo)<0)
+									DBG("Failed to invoke RDA5807M_isStereo().\n");
+								
+								if(RDA5807M_getRSSI(&rssi)<0)
+									DBG("Failed to invoke RDA5807M_getRSSI().\n");
+								
+								DBG("freq=%d, isStation=%d, isStereo=%d, rssi=%d\n", val, isStation, isStereo, rssi);
+								
 								strncpy(g_curSta, arg[0], 32);
 								bufSend=makeRawMsg(MSG_SET_STA_REPLY, "0;%d", val);
 							} else
